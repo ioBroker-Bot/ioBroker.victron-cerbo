@@ -1,0 +1,133 @@
+{
+  "common": {
+    "name": "victron-cerbo",
+    "version": "0.0.1",
+    "news": {
+      "0.0.1": {
+        "en": "Initial release",
+        "de": "Erstveröffentlichung",
+        "ru": "Начальная версия",
+        "pt": "Versão inicial",
+        "nl": "Eerste uitgave",
+        "fr": "Version initiale",
+        "it": "Versione iniziale",
+        "es": "Versión inicial",
+        "pl": "Wersja początkowa",
+        "uk": "Початкова версія",
+        "zh-cn": "初始版本"
+      }
+    },
+    "titleLang": {
+      "en": "Victron Cerbo",
+      "de": "Victron Cerbo",
+      "ru": "Victron Cerbo",
+      "pt": "Victron Cerbo",
+      "nl": "Victron Cerbo",
+      "fr": "Victron Cerbo",
+      "it": "Victron Cerbo",
+      "es": "Victron Cerbo",
+      "pl": "Victron Cerbo",
+      "zh-cn": "Victron Cerbo",
+      "uk": "Victron Cerbo"
+    },
+    "desc": {
+      "en": "This adapter allows to connect Victron Cerbo GX devices via MQTT",
+      "de": "Dieser Adapter ermöglicht den Anschluss von Victron Cerbo GX Geräten über MQTT",
+      "ru": "Этот адаптер позволяет подключать устройства Victron Cerbo GX через MQTT",
+      "pt": "Este adaptador permite conectar dispositivos Victron Cerbo GX via MQTT",
+      "nl": "Deze adapter maakt het mogelijk om Victron Cerbo GX-apparaten via MQTT aan te sluiten",
+      "fr": "Cet adaptateur permet de connecter des appareils Victron Cerbo GX via MQTT",
+      "it": "Questo adattatore consente di collegare dispositivi Victron Cerbo GX tramite MQTT",
+      "es": "Este adaptador permite conectar dispositivos Victron Cerbo GX a través de MQTT",
+      "pl": "Ten adapter umożliwia podłączenie urządzeń Victron Cerbo GX przez MQTT",
+      "zh-cn": "该适配器允许通过MQTT连接Victron Cerbo GX设备",
+      "uk": "Цей адаптер дозволяє підключати пристрої Victron Cerbo GX через MQTT"
+    },
+    "authors": [
+      "Denis Haev <dogafox@gmail.com>"
+    ],
+    "licenseInformation": {
+      "license": "MIT",
+      "type": "free"
+    },
+    "platform": "Javascript/Node.js",
+    "mode": "daemon",
+    "compact": true,
+    "enabled": true,
+    "readme": "https://github.com/ioBroker/ioBroker.victron-cerbo/blob/master/README.md",
+    "loglevel": "info",
+    "icon": "victron-cerbo.svg",
+    "adminUI": {
+      "config": "json"
+    },
+    "keywords": [
+      "Victron",
+      "Cerbo",
+      "MQTT",
+      "energy",
+      "solar"
+    ],
+    "connectionType": "local",
+    "dataSource": "push",
+    "tier": 2,
+    "extIcon": "https://raw.githubusercontent.com/ioBroker/ioBroker.victron-cerbo/master/admin/victron-cerbo.svg",
+    "type": "energy",
+    "dependencies": [
+      {
+        "js-controller": ">=5.0.19"
+      }
+    ],
+    "globalDependencies": [
+      {
+        "admin": ">=7.6.17"
+      }
+    ]
+  },
+  "encryptedNative": [
+    "password"
+  ],
+  "protectedNative": [
+    "password"
+  ],
+  "native": {
+    "port": 1883,
+    "bind": "0.0.0.0",
+    "user": "",
+    "password": "",
+    "timeout": 300,
+    "TELE_SENSOR": true,
+    "TELE_MARGINS": false,
+    "TELE_STATE": true,
+    "STAT_RESULT": false,
+    "OBJ_TREE": false,
+    "storeClientsTime": 1440,
+    "defaultQoS": 0,
+    "retransmitInterval": 2000,
+    "retransmitCount": 10,
+    "ignorePings": false,
+    "ignoreNotConnectedWarnings": false
+  },
+  "objects": [],
+  "instanceObjects": [
+    {
+      "_id": "info",
+      "type": "channel",
+      "common": {
+        "name": "Information"
+      },
+      "native": {}
+    },
+    {
+      "_id": "info.connection",
+      "type": "state",
+      "common": {
+        "role": "info.clients",
+        "name": "List of connected clients",
+        "type": "string",
+        "read": true,
+        "write": false
+      },
+      "native": {}
+    }
+  ]
+}
