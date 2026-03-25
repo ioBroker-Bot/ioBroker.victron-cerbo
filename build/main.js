@@ -1,3 +1,6 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.VictronCerboAdapter = void 0;
 /**
  *      ioBroker victron-cerbo Adapter
  *
@@ -5,21 +8,16 @@
  *
  *      MIT License
  */
-import { Adapter, type AdapterOptions } from '@iobroker/adapter-core';
-import { VictronMqttClient } from './lib/client';
-import { discoverCerboDevices } from './lib/discovery';
-import type { VictronCerboAdapterConfig } from './types';
-
-export class VictronCerboAdapter extends Adapter {
-    declare config: VictronCerboAdapterConfig;
-    client: VictronMqttClient | null = null;
-
-    public constructor(options: Partial<AdapterOptions> = {}) {
+const adapter_core_1 = require("@iobroker/adapter-core");
+const client_1 = require("./lib/client");
+class VictronCerboAdapter extends adapter_core_1.Adapter {
+    client = null;
+    constructor(options = {}) {
         super({
             ...options,
             name: 'victron-cerbo',
             ready: () => this.main(),
-            unload: async (cb?: () => void): Promise<void> => {
+            unload: async (cb) => {
                 if (this.client) {
                     await this.client.destroy();
                     this.client = null;
@@ -29,25 +27,26 @@ export class VictronCerboAdapter extends Adapter {
                     cb();
                 }
             },
-            stateChange: (id: string, state: ioBroker.State | null | undefined): void => {
+            stateChange: (id, state) => {
                 if (state && !state.ack) {
                     this.client
                         ?.onStateChange(id, state)
                         .catch(err => this.log.error(`Cannot process state change: ${err.message}`));
                 }
-            },
+            }
         });
     }
-
-    private main(): void {
+    main() {
         void this.setState('info.connection', false, true);
         this.subscribeStates('*');
-        this.client = new VictronMqttClient(this as ioBroker.Adapter);
+        this.client = new client_1.VictronMqttClient(this);
     }
 }
-
+exports.VictronCerboAdapter = VictronCerboAdapter;
 if (require.main !== module) {
-    module.exports = (options: Partial<AdapterOptions> | undefined) => new VictronCerboAdapter(options);
-} else {
+    module.exports = (options) => new VictronCerboAdapter(options);
+}
+else {
     (() => new VictronCerboAdapter())();
 }
+//# sourceMappingURL=main.js.map

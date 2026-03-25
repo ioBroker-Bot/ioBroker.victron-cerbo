@@ -12,35 +12,6 @@
             "lg": 12,
             "xl": 12
         },
-        "_discover": {
-            "newLine": true,
-            "type": "sendTo",
-            "label": "Discover Cerbo GX devices",
-            "icon": "search",
-            "command": "discover",
-            "jsonData": "{\"timeout\": 5000}",
-            "variant": "outlined",
-            "xs": 12,
-            "sm": 12,
-            "md": 12,
-            "lg": 12,
-            "xl": 12,
-            "hidden": "!!data.mqttHost"
-        },
-        "_discoveryResult": {
-            "type": "selectSendTo",
-            "label": "Discovered devices",
-            "command": "discover",
-            "jsonData": "{\"timeout\": 5000}",
-            "manual": false,
-            "alsoDependsOn": ["mqttHost", "portalId"],
-            "xs": 12,
-            "sm": 12,
-            "md": 12,
-            "lg": 12,
-            "xl": 12,
-            "hidden": "!!data.mqttHost"
-        },
         "mqttHost": {
             "newLine": true,
             "type": "text",
