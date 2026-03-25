@@ -23,5 +23,5 @@
         "types": ["node", "@iobroker/types"]
     },
     "include": ["src/**/*.*", "src/**/*.d.*"],
-    "exclude": ["build/**", "node_modules/**", "src-admin/**"]
+    "exclude": ["build/**", "node_modules/**"]
 }

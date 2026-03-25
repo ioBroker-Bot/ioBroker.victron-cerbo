@@ -90,22 +90,13 @@
     "password"
   ],
   "native": {
-    "port": 1883,
-    "bind": "0.0.0.0",
+    "mqttHost": "",
+    "mqttPort": 1883,
+    "mqttClientId": "",
+    "portalId": "",
+    "keepaliveInterval": 30,
     "user": "",
-    "password": "",
-    "timeout": 300,
-    "TELE_SENSOR": true,
-    "TELE_MARGINS": false,
-    "TELE_STATE": true,
-    "STAT_RESULT": false,
-    "OBJ_TREE": false,
-    "storeClientsTime": 1440,
-    "defaultQoS": 0,
-    "retransmitInterval": 2000,
-    "retransmitCount": 10,
-    "ignorePings": false,
-    "ignoreNotConnectedWarnings": false
+    "password": ""
   },
   "objects": [],
   "instanceObjects": [
@@ -121,11 +112,12 @@
       "_id": "info.connection",
       "type": "state",
       "common": {
-        "role": "info.clients",
-        "name": "List of connected clients",
-        "type": "string",
+        "role": "indicator.connected",
+        "name": "Connection to Victron Cerbo GX",
+        "type": "boolean",
         "read": true,
-        "write": false
+        "write": false,
+        "def": false
       },
       "native": {}
     }

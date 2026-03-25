@@ -12,19 +12,48 @@
             "lg": 12,
             "xl": 12
         },
-        "bind": {
+        "_discover": {
             "newLine": true,
-            "type": "ip",
-            "label": "IP",
-            "listenOnAllPorts": true,
+            "type": "sendTo",
+            "label": "Discover Cerbo GX devices",
+            "icon": "search",
+            "command": "discover",
+            "jsonData": "{\"timeout\": 5000}",
+            "variant": "outlined",
+            "xs": 12,
+            "sm": 12,
+            "md": 12,
+            "lg": 12,
+            "xl": 12,
+            "hidden": "!!data.mqttHost"
+        },
+        "_discoveryResult": {
+            "type": "selectSendTo",
+            "label": "Discovered devices",
+            "command": "discover",
+            "jsonData": "{\"timeout\": 5000}",
+            "manual": false,
+            "alsoDependsOn": ["mqttHost", "portalId"],
+            "xs": 12,
+            "sm": 12,
+            "md": 12,
+            "lg": 12,
+            "xl": 12,
+            "hidden": "!!data.mqttHost"
+        },
+        "mqttHost": {
+            "newLine": true,
+            "type": "text",
+            "label": "MQTT broker host",
+            "help": "IP address or hostname of the Victron Cerbo GX",
             "xs": 12,
             "sm": 12,
             "md": 6,
             "lg": 4,
             "xl": 4
         },
-        "port": {
-            "label": "Port",
+        "mqttPort": {
+            "label": "MQTT broker port",
             "type": "number",
             "min": 1,
             "max": 65535,
@@ -34,12 +63,10 @@
             "lg": 4,
             "xl": 4
         },
-        "timeout": {
-            "label": "Client timeout",
-            "help": "in seconds",
-            "type": "number",
-            "min": 1,
-            "max": 99999,
+        "portalId": {
+            "label": "VRM Portal ID",
+            "type": "text",
+            "help": "VRM Portal ID of the Cerbo GX (e.g. c0619ab82b23). Found in Settings > VRM online portal. Leave empty for auto-detection",
             "xs": 12,
             "sm": 12,
             "md": 6,
@@ -80,7 +107,7 @@
         "_header3": {
             "newLine": true,
             "type": "header",
-            "text": "Auto creation of states",
+            "text": "Advanced settings",
             "size": 3,
             "xs": 12,
             "sm": 12,
@@ -88,138 +115,23 @@
             "lg": 12,
             "xl": 12
         },
-        "TELE_SENSOR": {
-            "newLine": true,
-            "type": "checkbox",
-            "label": "For tele/SENSOR",
-            "xs": 12,
-            "sm": 12,
-            "md": 6,
-            "lg": 4,
-            "xl": 4
-        },
-        "TELE_STATE": {
-            "type": "checkbox",
-            "label": "For tele/STATE",
-            "xs": 12,
-            "sm": 12,
-            "md": 6,
-            "lg": 4,
-            "xl": 4
-        },
-        "TELE_MARGINS": {
-            "type": "checkbox",
-            "label": "For tele/MARGINS",
-            "xs": 12,
-            "sm": 12,
-            "md": 6,
-            "lg": 4,
-            "xl": 4
-        },
-        "STAT_RESULT": {
-            "type": "checkbox",
-            "label": "For stat/RESULT",
-            "xs": 12,
-            "sm": 12,
-            "md": 6,
-            "lg": 4,
-            "xl": 4
-        },
-        "OBJ_TREE": {
-            "type": "checkbox",
-            "label": "Create object tree",
-            "help": "WARNING! Check README.md!",
-            "xs": 12,
-            "sm": 12,
-            "md": 6,
-            "lg": 4,
-            "xl": 4
-        },
-        "_header4": {
-            "newLine": true,
-            "type": "header",
-            "text": "Other settings",
-            "size": 3,
-            "xs": 12,
-            "sm": 12,
-            "md": 12,
-            "lg": 12,
-            "xl": 12
-        },
-        "ignorePings": {
-            "newLine": true,
-            "type": "checkbox",
-            "label": "Ignore warnings with pingreq",
-            "xs": 12,
-            "sm": 12,
-            "md": 6,
-            "lg": 4,
-            "xl": 4
-        },
-        "ignoreNotConnectedWarnings": {
-            "type": "checkbox",
-            "label": "Ignore 'not connected' warnings",
-            "help": "Suppress warnings when commands are sent to offline devices",
-            "xs": 12,
-            "sm": 12,
-            "md": 6,
-            "lg": 4,
-            "xl": 4
-        },
-        "_header5": {
-            "newLine": true,
-            "type": "header",
-            "text": "Advanced MQTT settings",
-            "size": 3,
-            "xs": 12,
-            "sm": 12,
-            "md": 12,
-            "lg": 12,
-            "xl": 12
-        },
-        "storeClientsTime": {
+        "keepaliveInterval": {
             "newLine": true,
             "type": "number",
-            "label": "Store clients time",
-            "help": "Time in minutes to store client information",
-            "min": 1,
-            "max": 99999,
+            "label": "Keepalive interval",
+            "help": "Interval in seconds for sending keepalive to Cerbo GX",
+            "min": 5,
+            "max": 55,
             "xs": 12,
             "sm": 12,
             "md": 6,
             "lg": 4,
             "xl": 4
         },
-        "defaultQoS": {
-            "type": "number",
-            "label": "Default QoS",
-            "help": "Default Quality of Service level (0, 1, or 2)",
-            "min": 0,
-            "max": 2,
-            "xs": 12,
-            "sm": 12,
-            "md": 6,
-            "lg": 4,
-            "xl": 4
-        },
-        "retransmitInterval": {
-            "type": "number",
-            "label": "Retransmit interval",
-            "help": "Interval in milliseconds for message retransmission",
-            "min": 100,
-            "max": 99999,
-            "xs": 12,
-            "sm": 12,
-            "md": 6,
-            "lg": 4,
-            "xl": 4
-        },
-        "retransmitCount": {
-            "type": "number",
-            "label": "Retransmit count",
-            "help": "Maximum number of retransmission attempts",
-            "min": 1,
-            "max": 100,
+        "mqttClientId": {
+            "type": "text",
+            "label": "MQTT Client ID",
+            "help": "Custom MQTT client ID (leave empty for auto-generated)",
             "xs": 12,
             "sm": 12,
             "md": 6,

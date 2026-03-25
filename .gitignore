@@ -6,3 +6,5 @@ iob_npm.done
 
 #ignore .commitinfo created by ioBroker release script
 .commitinfo
+/0_userdata.0.victron.cerbo.json
+/.claude/settings.local.json
