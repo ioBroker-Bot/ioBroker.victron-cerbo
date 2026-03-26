@@ -80,10 +80,10 @@ jobs:
                   # install-command: 'npm install'
                   # npm-token: ${{ secrets.NPM_TOKEN }}
                   github-token: ${{ secrets.GITHUB_TOKEN }}
-                  sentry: true
-                  sentry-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
-                  sentry-url: https://sentry.iobroker.net
-                  sentry-org: iobroker
-                  sentry-project: iobroker-victron-cerbo
-                  sentry-version-prefix: iobroker.victron-cerbo
-                  sentry-sourcemap-paths: build/
+#                  sentry: true
+#                  sentry-token: ${{ secrets.SENTRY_AUTH_TOKEN }}
+#                  sentry-url: https://sentry.iobroker.net
+#                  sentry-org: iobroker
+#                  sentry-project: iobroker-victron-cerbo
+#                  sentry-version-prefix: iobroker.victron-cerbo
+#                  sentry-sourcemap-paths: build/

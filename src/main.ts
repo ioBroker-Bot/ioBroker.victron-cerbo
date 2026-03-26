@@ -7,7 +7,6 @@
  */
 import { Adapter, type AdapterOptions } from '@iobroker/adapter-core';
 import { VictronMqttClient } from './lib/client';
-import { discoverCerboDevices } from './lib/discovery';
 import type { VictronCerboAdapterConfig } from './types';
 
 export class VictronCerboAdapter extends Adapter {
