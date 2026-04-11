@@ -392,6 +392,29 @@ export class VictronMqttClient {
             stateType = 'boolean';
         }
 
+        // Check if state already exists from a previous adapter run
+        const existingObj = await this.adapter.getObjectAsync(stateId);
+        if (existingObj) {
+            this.existingObjects.add(stateId);
+            const existingType = existingObj.common?.type as ioBroker.CommonType | undefined;
+
+            if (known && existingType !== known.type) {
+                // Known definition disagrees with stored type – update the object
+                await this.adapter.extendObjectAsync(stateId, {
+                    common: {
+                        type: known.type,
+                        role: known.role,
+                        name: known.name,
+                    } as Partial<ioBroker.StateCommon>,
+                });
+                this.stateTypes.set(stateId, known.type);
+            } else {
+                // Use the stored type for coercion to avoid type mismatch errors
+                this.stateTypes.set(stateId, existingType || stateType);
+            }
+            return;
+        }
+
         const common: ioBroker.StateCommon = {
             name: known?.name || stateName,
             type: stateType,
