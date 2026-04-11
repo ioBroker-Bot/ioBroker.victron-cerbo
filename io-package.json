@@ -1,21 +1,8 @@
 {
   "common": {
     "name": "victron-cerbo",
-    "version": "0.1.0",
+    "version": "0.0.1",
     "news": {
-      "0.1.0": {
-        "en": "Corrected some states",
-        "de": "Einige Staaten korrigiert",
-        "ru": "Исправлены некоторые штаты",
-        "pt": "Corrigido alguns estados",
-        "nl": "Gecorrigeerd aantal staten",
-        "fr": "Correction de certains états",
-        "it": "Corretto alcuni stati",
-        "es": "Corregidos algunos estados",
-        "pl": "Poprawiono niektóre stany",
-        "uk": "Виправлено деякі стани",
-        "zh-cn": "更正了一些州"
-      },
       "0.0.1": {
         "en": "Initial release",
         "de": "Erstveröffentlichung",
