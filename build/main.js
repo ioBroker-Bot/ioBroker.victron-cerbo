@@ -33,7 +33,7 @@ class VictronCerboAdapter extends adapter_core_1.Adapter {
                         ?.onStateChange(id, state)
                         .catch(err => this.log.error(`Cannot process state change: ${err.message}`));
                 }
-            }
+            },
         });
     }
     main() {

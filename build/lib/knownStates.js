@@ -645,6 +645,22 @@ const knownStates = {
         write: false,
     },
     'system/Serial': { name: 'Serial / Portal ID', role: 'info.serial', type: 'string', read: true, write: false },
+    'system/Control/Dvcc': {
+        name: 'DVCC active',
+        role: 'indicator',
+        type: 'number',
+        read: true,
+        write: false,
+        states: { 0: 'Disabled', 1: 'Enabled' },
+    },
+    'system/Control/MaxChargeCurrent': {
+        name: 'Max charge current',
+        role: 'value.current',
+        type: 'number',
+        unit: 'A',
+        read: true,
+        write: false,
+    },
     // ========== grid ==========
     'grid/Ac/L1/Power': {
         name: 'Grid power L1',

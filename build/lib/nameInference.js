@@ -61,6 +61,7 @@ const NAME_PATTERNS = [
     { pattern: /^IsActive$/i, role: 'indicator', unit: '', asBoolean: true },
     { pattern: /^Present$/i, role: 'indicator', unit: '', asBoolean: true },
     { pattern: /^BmsPresent$/i, role: 'indicator', unit: '', asBoolean: true },
+    { pattern: /^Silenced$/i, role: 'indicator', unit: '', asBoolean: true },
     // Alarm patterns
     { pattern: /^Alarm/i, role: 'indicator.alarm', unit: '' },
     // Info patterns
@@ -82,7 +83,7 @@ const NAME_PATTERNS = [
 function inferFromName(name) {
     for (const entry of NAME_PATTERNS) {
         if (entry.pattern.test(name)) {
-            return { role: entry.role, unit: entry.unit };
+            return { role: entry.role, unit: entry.unit, asBoolean: entry.asBoolean };
         }
     }
     return null;
