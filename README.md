@@ -24,7 +24,7 @@ The Victron Cerbo GX is an advanced monitoring and control hub for Victron Energ
     ### **WORK IN PROGRESS**
 -->
 ## Changelog
-### **WORK IN PROGRESS**
+### 0.2.1 (2026-04-12)
 * (@GermanBluefox) Implemented the tests
 
 ### 0.1.0 (2026-04-11)
