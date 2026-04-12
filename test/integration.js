@@ -807,7 +807,7 @@ const rules = [
 // Run integration tests
 tests.integration(path.join(__dirname, '..'), {
     defineAdditionalTests({ suite }) {
-        suite('Victron Cerbo MQTT Client Tests', (getHarness) => {
+        suite('Victron Cerbo MQTT Client Tests', getHarness => {
             let harness;
             let broker;
             let server;
@@ -815,9 +815,11 @@ tests.integration(path.join(__dirname, '..'), {
 
             /**
              * Publish a message from the mock broker to all subscribers (the adapter).
+             * Includes a safety timeout in case the aedes callback doesn't fire.
              */
             function publishFromBroker(mqttTopic, mqttPayload) {
-                return new Promise((resolve, reject) => {
+                return new Promise(resolve => {
+                    const timer = setTimeout(resolve, 100);
                     broker.publish(
                         {
                             topic: mqttTopic,
@@ -827,23 +829,26 @@ tests.integration(path.join(__dirname, '..'), {
                             cmd: 'publish',
                             dup: false,
                         },
-                        (err) => {
-                            if (err) return reject(err);
+                        () => {
+                            clearTimeout(timer);
                             resolve();
                         },
                     );
                 });
             }
 
+            /** Wait for the adapter to process an MQTT message */
+            const PROCESS_WAIT = 800;
+
             before(async function () {
                 this.timeout(60000);
 
-                // Start mock MQTT broker (aedes)
-                const { Aedes } = require('aedes');
-                const net = require('net');
-                broker = new Aedes();
+                // Start mock MQTT broker (aedes 0.51.x)
+                const aedes = require('aedes');
+                const net = require('node:net');
+                broker = aedes();
                 server = net.createServer(broker.handle);
-                await new Promise((resolve) => server.listen(MQTT_PORT, resolve));
+                await new Promise(resolve => server.listen(MQTT_PORT, resolve));
                 console.log(`Mock MQTT broker started on port ${MQTT_PORT}`);
 
                 // Track messages published by the adapter (client !== null means from a client)
@@ -876,27 +881,21 @@ tests.integration(path.join(__dirname, '..'), {
                 await harness.startAdapterAndWait();
 
                 // Wait for MQTT connection and subscription
-                await new Promise((resolve) => setTimeout(resolve, 3000));
+                await new Promise(resolve => setTimeout(resolve, 3000));
             });
 
             after(async function () {
                 this.timeout(10000);
-                if (broker) {
-                    broker.close();
-                }
-                if (server) {
-                    server.close();
-                }
+                broker?.close();
+                server?.close();
             });
 
             // ===== Connection test =====
             it('Should connect to the MQTT broker', async function () {
                 this.timeout(5000);
                 const state = await harness.states.getStateAsync('victron-cerbo.0.info.connection');
-                if (!state || state.val !== true) {
-                    throw new Error(
-                        `Expected info.connection = true, got ${state ? state.val : 'null'}`,
-                    );
+                if (!state?.val) {
+                    throw new Error(`Expected info.connection = true, got ${state ? state.val : 'null'}`);
                 }
             });
 
@@ -905,10 +904,8 @@ tests.integration(path.join(__dirname, '..'), {
                 this.timeout(10000);
                 adapterPublished.length = 0;
                 // Wait for a keepalive (interval is 5s)
-                await new Promise((resolve) => setTimeout(resolve, 6000));
-                const keepalives = adapterPublished.filter(
-                    (m) => m.topic === `R/${PORTAL_ID}/keepalive`,
-                );
+                await new Promise(resolve => setTimeout(resolve, 6000));
+                const keepalives = adapterPublished.filter(m => m.topic === `R/${PORTAL_ID}/keepalive`);
                 if (keepalives.length === 0) {
                     throw new Error('Expected at least one keepalive message');
                 }
@@ -920,7 +917,7 @@ tests.integration(path.join(__dirname, '..'), {
                     this.timeout(5000);
 
                     await publishFromBroker(rule.topic, rule.payload);
-                    await new Promise((resolve) => setTimeout(resolve, 500));
+                    await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                     const fullId = `victron-cerbo.0.${rule.stateId}`;
 
@@ -930,9 +927,7 @@ tests.integration(path.join(__dirname, '..'), {
                         throw new Error(`Object ${fullId} should exist`);
                     }
                     if (obj.type !== 'state') {
-                        throw new Error(
-                            `Object ${fullId} should be type "state", got "${obj.type}"`,
-                        );
+                        throw new Error(`Object ${fullId} should be type "state", got "${obj.type}"`);
                     }
 
                     // 2) Value must match
@@ -951,51 +946,37 @@ tests.integration(path.join(__dirname, '..'), {
 
                     // 3) Type
                     if (rule.type && obj.common.type !== rule.type) {
-                        throw new Error(
-                            `${fullId}: expected type="${rule.type}", got "${obj.common.type}"`,
-                        );
+                        throw new Error(`${fullId}: expected type="${rule.type}", got "${obj.common.type}"`);
                     }
 
                     // 4) Role
                     if (rule.role && obj.common.role !== rule.role) {
-                        throw new Error(
-                            `${fullId}: expected role="${rule.role}", got "${obj.common.role}"`,
-                        );
+                        throw new Error(`${fullId}: expected role="${rule.role}", got "${obj.common.role}"`);
                     }
 
                     // 5) Unit
                     if (rule.unit && obj.common.unit !== rule.unit) {
-                        throw new Error(
-                            `${fullId}: expected unit="${rule.unit}", got "${obj.common.unit}"`,
-                        );
+                        throw new Error(`${fullId}: expected unit="${rule.unit}", got "${obj.common.unit}"`);
                     }
 
                     // 6) Write flag
                     if (rule.write !== undefined && obj.common.write !== rule.write) {
-                        throw new Error(
-                            `${fullId}: expected write=${rule.write}, got ${obj.common.write}`,
-                        );
+                        throw new Error(`${fullId}: expected write=${rule.write}, got ${obj.common.write}`);
                     }
 
                     // 7) Min
                     if (rule.min !== undefined && obj.common.min !== rule.min) {
-                        throw new Error(
-                            `${fullId}: expected min=${rule.min}, got ${obj.common.min}`,
-                        );
+                        throw new Error(`${fullId}: expected min=${rule.min}, got ${obj.common.min}`);
                     }
 
                     // 8) Max
                     if (rule.max !== undefined && obj.common.max !== rule.max) {
-                        throw new Error(
-                            `${fullId}: expected max=${rule.max}, got ${obj.common.max}`,
-                        );
+                        throw new Error(`${fullId}: expected max=${rule.max}, got ${obj.common.max}`);
                     }
 
                     // 9) States enum
                     if (rule.hasStates && !obj.common.states) {
-                        throw new Error(
-                            `${fullId}: expected common.states to be set`,
-                        );
+                        throw new Error(`${fullId}: expected common.states to be set`);
                     }
                 });
             }
@@ -1008,7 +989,7 @@ tests.integration(path.join(__dirname, '..'), {
                     topic('battery', 257, 'Info'),
                     payload({ MaxChargeVoltage: 14.4, MaxChargeCurrent: 50, MaxDischargeCurrent: 100 }),
                 );
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 // Check channel exists
                 const channel = await harness.objects.getObjectAsync('victron-cerbo.0.battery.257.Info');
@@ -1027,7 +1008,9 @@ tests.integration(path.join(__dirname, '..'), {
                     throw new Error(`Expected MaxChargeCurrent=50, got ${current?.val}`);
                 }
 
-                const discharge = await harness.states.getStateAsync('victron-cerbo.0.battery.257.Info.MaxDischargeCurrent');
+                const discharge = await harness.states.getStateAsync(
+                    'victron-cerbo.0.battery.257.Info.MaxDischargeCurrent',
+                );
                 if (!discharge || discharge.val !== 100) {
                     throw new Error(`Expected MaxDischargeCurrent=100, got ${discharge?.val}`);
                 }
@@ -1044,7 +1027,7 @@ tests.integration(path.join(__dirname, '..'), {
                         { soc: 90, voltage: 13.1 },
                     ]),
                 );
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 // Parent channel
                 const parent = await harness.objects.getObjectAsync('victron-cerbo.0.system.0.Batteries');
@@ -1086,10 +1069,12 @@ tests.integration(path.join(__dirname, '..'), {
                         { Acknowledge: 1, Silenced: 1, Type: 'alarm' },
                     ]),
                 );
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 // Check Silenced states (should be boolean from inference)
-                const silenced0 = await harness.states.getStateAsync('victron-cerbo.0.platform.0.Notifications.0.Silenced');
+                const silenced0 = await harness.states.getStateAsync(
+                    'victron-cerbo.0.platform.0.Notifications.0.Silenced',
+                );
                 if (!silenced0) {
                     throw new Error('Expected Notifications.0.Silenced to exist');
                 }
@@ -1097,7 +1082,9 @@ tests.integration(path.join(__dirname, '..'), {
                     throw new Error(`Expected Notifications.0.Silenced=false, got ${silenced0.val}`);
                 }
 
-                const silenced1 = await harness.states.getStateAsync('victron-cerbo.0.platform.0.Notifications.1.Silenced');
+                const silenced1 = await harness.states.getStateAsync(
+                    'victron-cerbo.0.platform.0.Notifications.1.Silenced',
+                );
                 if (!silenced1) {
                     throw new Error('Expected Notifications.1.Silenced to exist');
                 }
@@ -1106,7 +1093,9 @@ tests.integration(path.join(__dirname, '..'), {
                 }
 
                 // Check Silenced object type is boolean
-                const silencedObj = await harness.objects.getObjectAsync('victron-cerbo.0.platform.0.Notifications.1.Silenced');
+                const silencedObj = await harness.objects.getObjectAsync(
+                    'victron-cerbo.0.platform.0.Notifications.1.Silenced',
+                );
                 if (silencedObj.common.type !== 'boolean') {
                     throw new Error(`Expected Silenced type=boolean, got ${silencedObj.common.type}`);
                 }
@@ -1124,23 +1113,21 @@ tests.integration(path.join(__dirname, '..'), {
 
                 // Ensure state exists
                 await publishFromBroker(topic('inverter', 276, 'Mode'), payload(2));
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 // Clear tracked messages
                 adapterPublished.length = 0;
 
                 // Simulate user change (ack=false)
                 await harness.states.setStateAsync('victron-cerbo.0.inverter.276.Mode', 4, false);
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
-                const writeMsg = adapterPublished.find((m) => m.topic.startsWith('W/'));
+                const writeMsg = adapterPublished.find(m => m.topic.startsWith('W/'));
                 if (!writeMsg) {
                     throw new Error('Expected a W/ topic to be published');
                 }
                 if (writeMsg.topic !== `W/${PORTAL_ID}/inverter/276/Mode`) {
-                    throw new Error(
-                        `Expected topic W/${PORTAL_ID}/inverter/276/Mode, got ${writeMsg.topic}`,
-                    );
+                    throw new Error(`Expected topic W/${PORTAL_ID}/inverter/276/Mode, got ${writeMsg.topic}`);
                 }
                 const parsed = JSON.parse(writeMsg.payload);
                 if (parsed.value !== 4) {
@@ -1153,11 +1140,8 @@ tests.integration(path.join(__dirname, '..'), {
                 this.timeout(5000);
 
                 // Ensure state exists
-                await publishFromBroker(
-                    topic('settings', 0, 'Settings/CGwacs/AcPowerSetPoint'),
-                    payload(50),
-                );
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await publishFromBroker(topic('settings', 0, 'Settings/CGwacs/AcPowerSetPoint'), payload(50));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 adapterPublished.length = 0;
 
@@ -1166,10 +1150,10 @@ tests.integration(path.join(__dirname, '..'), {
                     100,
                     false,
                 );
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 const writeMsg = adapterPublished.find(
-                    (m) => m.topic === `W/${PORTAL_ID}/settings/0/Settings/CGwacs/AcPowerSetPoint`,
+                    m => m.topic === `W/${PORTAL_ID}/settings/0/Settings/CGwacs/AcPowerSetPoint`,
                 );
                 if (!writeMsg) {
                     throw new Error('Expected W/ topic for settings write-back');
@@ -1186,20 +1170,14 @@ tests.integration(path.join(__dirname, '..'), {
 
                 // Ensure state exists
                 await publishFromBroker(topic('battery', 256, 'Dc/0/Voltage'), payload(12.85));
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 adapterPublished.length = 0;
 
-                await harness.states.setStateAsync(
-                    'victron-cerbo.0.battery.256.Dc.0.Voltage',
-                    13.0,
-                    false,
-                );
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await harness.states.setStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage', 13.0, false);
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
-                const writeMsg = adapterPublished.find((m) =>
-                    m.topic === `W/${PORTAL_ID}/battery/256/Dc/0/Voltage`,
-                );
+                const writeMsg = adapterPublished.find(m => m.topic === `W/${PORTAL_ID}/battery/256/Dc/0/Voltage`);
                 if (writeMsg) {
                     throw new Error('Should not publish W/ topic for read-only state');
                 }
@@ -1211,14 +1189,11 @@ tests.integration(path.join(__dirname, '..'), {
 
                 // First set a known value
                 await publishFromBroker(topic('battery', 256, 'Dc/0/Voltage'), payload(12.85));
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 // Now send invalid JSON
-                await publishFromBroker(
-                    `N/${PORTAL_ID}/battery/256/Dc/0/Voltage`,
-                    'this is not json',
-                );
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await publishFromBroker(`N/${PORTAL_ID}/battery/256/Dc/0/Voltage`, 'this is not json');
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 // Value should still be 12.85
                 const state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage');
@@ -1231,11 +1206,8 @@ tests.integration(path.join(__dirname, '..'), {
             it('Should skip messages with undefined value', async function () {
                 this.timeout(5000);
 
-                await publishFromBroker(
-                    `N/${PORTAL_ID}/custom/0/SkipThis`,
-                    JSON.stringify({}),
-                );
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await publishFromBroker(`N/${PORTAL_ID}/custom/0/SkipThis`, JSON.stringify({}));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 const obj = await harness.objects.getObjectAsync('victron-cerbo.0.custom.0.SkipThis');
                 if (obj) {
@@ -1247,11 +1219,8 @@ tests.integration(path.join(__dirname, '..'), {
             it('Should ignore non-N/ topics', async function () {
                 this.timeout(5000);
 
-                await publishFromBroker(
-                    `X/${PORTAL_ID}/battery/256/Dc/0/Voltage`,
-                    payload(999),
-                );
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await publishFromBroker(`X/${PORTAL_ID}/battery/256/Dc/0/Voltage`, payload(999));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 // The battery voltage should still have the value from before (12.85)
                 const state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage');
@@ -1265,7 +1234,7 @@ tests.integration(path.join(__dirname, '..'), {
                 this.timeout(5000);
 
                 await publishFromBroker(topic('battery', 256, 'CustomName'), payload(null));
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 const state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.CustomName');
                 if (!state) {
@@ -1280,11 +1249,8 @@ tests.integration(path.join(__dirname, '..'), {
             it('Should ignore messages from different portal ID', async function () {
                 this.timeout(5000);
 
-                await publishFromBroker(
-                    `N/differentPortalId/battery/256/Dc/0/Voltage`,
-                    payload(777),
-                );
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await publishFromBroker(`N/differentPortalId/battery/256/Dc/0/Voltage`, payload(777));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 const state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage');
                 if (state && state.val === 777) {
@@ -1318,7 +1284,7 @@ tests.integration(path.join(__dirname, '..'), {
                 this.timeout(5000);
 
                 await publishFromBroker(topic('charger', 261, 'Relay/0/State'), payload(0));
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 const obj = await harness.objects.getObjectAsync('victron-cerbo.0.charger.261.Relay.0.State');
                 if (!obj) {
@@ -1334,11 +1300,9 @@ tests.integration(path.join(__dirname, '..'), {
                 // Write-back test
                 adapterPublished.length = 0;
                 await harness.states.setStateAsync('victron-cerbo.0.charger.261.Relay.0.State', 1, false);
-                await new Promise((resolve) => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
-                const writeMsg = adapterPublished.find(
-                    (m) => m.topic === `W/${PORTAL_ID}/charger/261/Relay/0/State`,
-                );
+                const writeMsg = adapterPublished.find(m => m.topic === `W/${PORTAL_ID}/charger/261/Relay/0/State`);
                 if (!writeMsg) {
                     throw new Error('Expected W/ topic for charger relay write-back');
                 }
@@ -1354,7 +1318,7 @@ tests.integration(path.join(__dirname, '..'), {
 
                 // First value
                 await publishFromBroker(topic('battery', 256, 'Dc/0/Voltage'), payload(12.5));
-                await new Promise((resolve) => setTimeout(resolve, 300));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 let state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage');
                 if (!state || state.val !== 12.5) {
@@ -1363,7 +1327,7 @@ tests.integration(path.join(__dirname, '..'), {
 
                 // Updated value
                 await publishFromBroker(topic('battery', 256, 'Dc/0/Voltage'), payload(13.2));
-                await new Promise((resolve) => setTimeout(resolve, 300));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage');
                 if (!state || state.val !== 13.2) {
@@ -1377,7 +1341,7 @@ tests.integration(path.join(__dirname, '..'), {
 
                 // Send 1 first
                 await publishFromBroker(topic('custom', 1, 'Connected'), payload(1));
-                await new Promise((resolve) => setTimeout(resolve, 300));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 let state = await harness.states.getStateAsync('victron-cerbo.0.custom.1.Connected');
                 if (!state || state.val !== true) {
@@ -1386,7 +1350,7 @@ tests.integration(path.join(__dirname, '..'), {
 
                 // Send 0
                 await publishFromBroker(topic('custom', 1, 'Connected'), payload(0));
-                await new Promise((resolve) => setTimeout(resolve, 300));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 state = await harness.states.getStateAsync('victron-cerbo.0.custom.1.Connected');
                 if (!state || state.val !== false) {
@@ -1395,7 +1359,7 @@ tests.integration(path.join(__dirname, '..'), {
 
                 // Send 1 again
                 await publishFromBroker(topic('custom', 1, 'Connected'), payload(1));
-                await new Promise((resolve) => setTimeout(resolve, 300));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
 
                 state = await harness.states.getStateAsync('victron-cerbo.0.custom.1.Connected');
                 if (!state || state.val !== true) {
