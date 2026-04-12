@@ -130,7 +130,7 @@ class VictronMqttClient {
             clearInterval(this.keepaliveTimer);
         }
         const interval = (parseInt(String(this.config.keepaliveInterval), 10) || 30) * 1000;
-        // Send immediately
+        // Send it immediately
         this.sendKeepalive();
         this.keepaliveTimer = setInterval(() => this.sendKeepalive(), interval);
     }
@@ -291,7 +291,11 @@ class VictronMqttClient {
      * Coerce a value to match the registered state type.
      * Handles Victron API inconsistencies where the same state may send number (0/1) and boolean (true/false).
      */
-    coerceValue(stateId, serviceType, dbusPath, value) {
+    coerceValue(stateId, _serviceType, _dbusPath, value) {
+        // null means "no value" – pass through without conversion
+        if (value === null || value === undefined) {
+            return null;
+        }
         const registeredType = this.stateTypes.get(stateId);
         if (registeredType === 'boolean') {
             if (typeof value === 'number') {
@@ -312,18 +316,8 @@ class VictronMqttClient {
             }
         }
         if (registeredType === 'string' && typeof value !== 'string') {
-            return String(value);
-        }
-        // For asBoolean inference: convert 0/1 to boolean even if not yet registered
-        if (!registeredType && typeof value === 'number' && (value === 0 || value === 1)) {
-            const stateName = dbusPath.split('/').pop() || '';
-            const lookupKey = `${serviceType}/${dbusPath}`;
-            if (!knownStates_1.default[lookupKey]) {
-                const inferred = (0, nameInference_1.inferFromName)(stateName);
-                if (inferred?.asBoolean) {
-                    return value === 1;
-                }
-            }
+            // eslint-disable-next-line @typescript-eslint/no-base-to-string
+            return value.toString();
         }
         return value;
     }
@@ -357,7 +351,8 @@ class VictronMqttClient {
         if (known) {
             stateType = known.type;
         }
-        else if (inferred?.asBoolean && typeof value === 'number' && (value === 0 || value === 1)) {
+        else if (inferred?.asBoolean) {
+            // Boolean-like states (Connected, Active, Enabled, Silenced, etc.) are always boolean
             stateType = 'boolean';
         }
         else if (typeof value === 'number') {
@@ -372,24 +367,21 @@ class VictronMqttClient {
         // Check if state already exists from a previous adapter run
         const existingObj = await this.adapter.getObjectAsync(stateId);
         if (existingObj) {
-            this.existingObjects.add(stateId);
             const existingType = existingObj.common?.type;
-            if (known && existingType !== known.type) {
-                // Known definition disagrees with stored type – update the object
-                await this.adapter.extendObjectAsync(stateId, {
-                    common: {
-                        type: known.type,
-                        role: known.role,
-                        name: known.name,
-                    },
-                });
-                this.stateTypes.set(stateId, known.type);
+            // Only recreate when we have a strong reason: known state definition or inferred boolean
+            const shouldRecreate = existingType && existingType !== stateType && (!!known || !!inferred?.asBoolean);
+            if (shouldRecreate) {
+                // Type definition changed – delete and recreate with correct type
+                this.adapter.log.debug(`State ${stateId}: type changed from ${existingType} to ${stateType}, recreating`);
+                await this.adapter.delObjectAsync(stateId);
+                // Fall through to create the state with the correct type
             }
             else {
+                this.existingObjects.add(stateId);
                 // Use the stored type for coercion to avoid type mismatch errors
                 this.stateTypes.set(stateId, existingType || stateType);
+                return;
             }
-            return;
         }
         const common = {
             name: known?.name || stateName,

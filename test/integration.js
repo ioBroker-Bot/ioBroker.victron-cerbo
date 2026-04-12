@@ -7,747 +7,1401 @@
 const path = require('path');
 const { tests } = require('@iobroker/testing');
 
-// Test MQTT client
-const MqttClient = require('./lib/mqttClient.js');
+// Portal ID used in all test messages
+const PORTAL_ID = 'c0619ab12345';
+const MQTT_PORT = 18830;
 
-// Test data - MQTT messages to send and expected state values
-const rules = {
-    'tele/sonoff_4ch/STATE': {
-        send: '{"Time":"2017-10-02T19:26:06", "Uptime":0, "Vcc":3.226, "POWER1":"OFF", "POWER2":"OFF", "POWER3":"OFF", "POWER4":"OFF", "Wifi":{"AP":1, "SSId":"AAA", "RSSI": 15}}',
-        expect: { Vcc: 3.226, Wifi_RSSI: 15, Time: '2017-10-02T19:26:06' },
-    },
-    'tele/sonoff/SENSOR': {
-        send: '{"Time":"2017-10-05T17:43:19", "DS18x20":{"DS1":{"Type":"DS18B20", "Address":"28FF9A9876815022A", "Temperature":12.2}}, "TempUnit":"C"}',
-        expect: { DS18x20_DS1_Temperature: 12.2 },
-    },
-    'tele/sonoff5/SENSOR': {
-        send: '{"Time":"2017-10-03T14:02:25", "AM2301-14":{"Temperature":21.6, "Humidity":54.7}, "TempUnit":"C"}',
-        expect: { 'AM2301-14_Temperature': 21.6, 'AM2301-14_Humidity': 54.7 },
-    },
-    'tele/SonoffPOW/INFO1': {
-        send: '{"Module":"Sonoff Pow", "Version":"5.8.0", "FallbackTopic":"SonoffPOW", "GroupTopic":"sonoffs"}',
-        expect: { 'INFO.Module': 'Sonoff Pow', 'INFO.Version': '5.8.0' },
-    },
-    'tele/SonoffPOW/INFO2': {
-        send: '{"WebServerMode":"Admin", "Hostname":"Sonoffpow", "IPAddress":"192.168.2.182"}',
-        expect: { 'INFO.Hostname': 'Sonoffpow', 'INFO.IPAddress': '192.168.2.182' },
-    },
-    'tele/SonoffPOW/INFO3': {
-        send: '{"RestartReason":"Software/System restart"}',
-        expect: { 'INFO.RestartReason': 'Software/System restart' },
-    },
-    'tele/sonoff_4ch/ENERGY': {
-        send: '{"Time":"2017-10-02T19:24:32", "Total":1.753, "Yesterday":0.308, "Today":0.205, "Period":0, "Power":3, "Factor":0.12, "Voltage":221, "Current":0.097}',
-        expect: { 'ENERGY.Total': 1.753, 'ENERGY.Current': 0.097, 'ENERGY.Power': 3 },
-    },
-    'tele/sonoffPOW/MARGINS': {
-        send: '{"Time":"2020-04-23T10:15:00","PowerLow":100,"PowerHigh":2000,"PowerDelta":50}',
-        expect: { 'MARGINS.PowerLow': 100, 'MARGINS.PowerHigh': 2000, 'MARGINS.PowerDelta': 50 },
-    },
-    'tele/powR2/ENERGY': {
-        send: '{"Time":"2022-09-06T11:17:35", "Total":1.753, "Yesterday":0.308, "Today":0.205, "Period":5, "Power":42, "ApparentPower":44, "ReactivePower":12, "Factor":0.95, "Voltage":230, "Current":0.183}',
-        expect: {
-            'ENERGY.Total': 1.753,
-            'ENERGY.Yesterday': 0.308,
-            'ENERGY.Today': 0.205,
-            'ENERGY.Period': 5,
-            'ENERGY.Power': 42,
-            'ENERGY.ApparentPower': 44,
-            'ENERGY.ReactivePower': 12,
-            'ENERGY.Factor': 0.95,
-            'ENERGY.Voltage': 230,
-            'ENERGY.Current': 0.183,
-        },
-    },
-    'tele/powR2/STATE': {
-        send: '{"Time":"2022-09-06T11:17:35", "Uptime":"0T02:23:45", "UptimeSec":8625, "POWER":"ON", "Total":1.753, "Yesterday":0.308, "Today":0.205, "Power":42, "Factor":0.95, "Voltage":230, "Current":0.183, "Wifi":{"AP":1, "SSId":"MyWiFi", "RSSI":58}}',
-        expect: {
-            Total: 1.753,
-            Yesterday: 0.308,
-            Today: 0.205,
-            Power: 42,
-            Factor: 0.95,
-            Voltage: 230,
-            Current: 0.183,
-            POWER: true,
-        },
-    },
-    'tele/sonoff_4ch/ENERGY1': {
-        send: '"Time":"2017-10-02T19:24:32", "Total":1.753, "Yesterday":0.308, "Today":0.205, "Period":0, "Power":3, "Factor":0.12, "Voltage":221, "Current":0.097}',
-        expect: {},
-    },
-    'tele/sonoff_1ch/STATE': { send: '{"Time":"2017-10-02T19:24:32", "Color": "112233"}', expect: {} },
-    'tele/sonoff/STATE': {
-        send: '{"Time":"2018-06-19T06:39:33","Uptime":"0T23:47:32","Vcc":3.482,"POWER":"OFF","Dimmer":100,"Color":"000000FF","HSBColor":"0,0,0","Channel":[0,0,0,100],"Scheme":0,"Fade":"OFF","Speed":4,"LedTable":"OFF","Wifi":{"AP":1,"SSId":"WLAN-7490","RSSI":50,"APMac":"34:31:C4:C6:EB:0F"}}',
-        expect: {},
-    },
-    'tele/sonoff1/SENSOR': {
-        send: '{"Time":"2018-06-15T10:03:24","DS18B20":{"Temperature":0.0},"TempUnit":"C"}',
-        expect: { DS18B20_Temperature: 0 },
-    },
-    'tele/nan/SENSOR': {
-        send: '{"Time":"2018-10-31T11:57:31","SI7021-00":{"Temperature":17.1,"Humidity":70.0},"SI7021-02":{"Temperature":nan,"Humidity":nan},"SI7021-04":{"Temperature":10.0,"Humidity":59.7},"SI7021-05":{"Temperature":8.8,"Humidity":79.3},"TempUnit":"C"}',
-        expect: { 'SI7021-04_Temperature': 10 },
-    },
-    'tele/true/SENSOR': {
-        send: '{"Time":"2017-10-02T19:26:06", "Uptime":0, "Vcc":3.226, "POWER1":"true"}',
-        expect: { POWER1: true },
-    },
-    '/ESP_BOX/BM280/Pressure': { send: '1010.09', expect: { Pressure: 1010.09 } },
-    'tele/tasmota_BMP280/SENSOR': {
-        send: '{"Time":"2024-02-25T11:27:00","BMP280":{"Temperature":28.520,"Pressure":753.3},"PressureUnit":"mmHg"}',
-        expect: { BMP280_Temperature: 28.52, BMP280_Pressure: 753.3 },
-    },
-    'tele/tasmota_BME280/SENSOR': {
-        send: '{"Time":"2024-02-25T11:27:00","BME280":{"Temperature":25.1,"Pressure":1013.2,"Humidity":65.5},"TempUnit":"F","PressureUnit":"mmHg"}',
-        expect: { BME280_Temperature: 25.1, BME280_Pressure: 1013.2, BME280_Humidity: 65.5 },
-    },
-    '/ESP_BOX/BM280/Humidity': { send: '42.39', expect: { Humidity: 42.39 } },
-    '/ESP_BOX/BM280/Temperature': { send: '25.86', expect: { Temperature: 25.86 } },
-    '/ESP_BOX/BM280/Approx. Altitude': { send: '24', expect: { Approx_Altitude: 24 } },
-    'stat/sonoff/POWER': { send: 'ON', expect: { POWER: true } },
-    'cmnd/sonoff/POWER': { send: '', expect: {} },
-    'stat/sonoff/RESULT': { send: '{"POWER": "ON"}', expect: { RESULT: null } },
-    'stat/sonoff/LWT': { send: 'someTopic', expect: { LWT: null } },
-    'stat/sonoff/ABC': { send: 'text', expect: { ABC: null } },
-    // This command overwrites the adresses of the devices
-    'tele/Hof/Lager/Tasmota/Relais/RFresv/Beleuchtung/UV/Beleuchtungsstaerke/Außenlampe/SENSOR': {
-        send: '{"Time":"2021-05-28T14:30:44","BH1750":{"Illuminance":27550},"VEML6075":{"UvaIntensity":1710,"UvbIntensity":890,"UvIndex":2.4}}',
-        expect: { VEML6075_UvIndex: 2.4 },
-    },
-    // Sonoff B1 (RGB LED controller) test cases based on actual device logs
-    'tele/LED1/STATE': {
-        send: '{"Time":"2018-01-19T19:45:22","Uptime":0,"Vcc":3.289,"POWER":"ON","Wifi":{"AP":1,"SSId":"SmartHOME","RSSI":96,"APMac":"60:31:97:3E:74:B4"}}',
-        expect: { Vcc: 3.289, POWER: true, Wifi_RSSI: 96 },
-    },
-    'tele/LED1/INFO1': {
-        send: '{"Module":"Sonoff B1","Version":"5.9.1f","FallbackTopic":"LED1","GroupTopic":"sonoffs"}',
-        expect: { 'INFO.Module': 'Sonoff B1', 'INFO.Version': '5.9.1f' },
-    },
-    'stat/LED1/RESULT1': { send: '{"POWER":"ON","Dimmer":100,"Color":"FFFFFF0000"}', expect: { RESULT: null } },
-    'stat/LED1/RESULT2': { send: '{"Dimmer":100}', expect: { RESULT: null } },
-    'stat/LED1/RESULT3': { send: '{"CT":499}', expect: { RESULT: null } },
-    // Sonoff SC (Environmental Sensor) test cases based on actual device logs
-    'tele/HomeMonitor/INFO1': {
-        send: '{"Module":"Sonoff SC","Version":"5.9.1f","FallbackTopic":"HomeMonitor","GroupTopic":"sonoffs"}',
-        expect: { 'INFO.Module': 'Sonoff SC', 'INFO.Version': '5.9.1f' },
-    },
-    'tele/HomeMonitor/STATE': {
-        send: '{"Time":"2018-01-19T20:15:16","Uptime":0,"Vcc":3.170,"Wifi":{"AP":1,"SSId":"SmartHOME","RSSI":100,"APMac":"60:31:97:3E:74:B4"}}',
-        expect: { Vcc: 3.17, Wifi_RSSI: 100 },
-    },
-    'tele/HomeMonitor/SENSOR': {
-        send: '{"Time":"2018-01-19T20:15:16","Temperature":20.0,"Humidity":16.0,"Light":10,"Noise":60,"AirQuality":90,"TempUnit":"C"}',
-        expect: { Temperature: 20.0, Humidity: 16.0, Light: 10, Noise: 60, AirQuality: 90 },
-    },
-    'tele/esp32_shutter/STATE': {
-        send: '{"Time":"2025-01-07T10:00:00","Uptime":"0T01:00:00","SHUTTER1":0,"SHUTTER2":25,"SHUTTER3":50,"SHUTTER4":75,"SHUTTER5":100,"SHUTTER6":0,"SHUTTER7":25,"SHUTTER8":50,"SHUTTER9":75,"SHUTTER10":100,"SHUTTER11":0,"SHUTTER12":25,"SHUTTER13":50,"SHUTTER14":75,"SHUTTER15":100,"SHUTTER16":33}',
-        expect: {
-            SHUTTER1: 0,
-            SHUTTER2: 25,
-            SHUTTER3: 50,
-            SHUTTER4: 75,
-            SHUTTER5: 100,
-            SHUTTER6: 0,
-            SHUTTER7: 25,
-            SHUTTER8: 50,
-            SHUTTER9: 75,
-            SHUTTER10: 100,
-            SHUTTER11: 0,
-            SHUTTER12: 25,
-            SHUTTER13: 50,
-            SHUTTER14: 75,
-            SHUTTER15: 100,
-            SHUTTER16: 33,
-        },
-    },
-    // Shutter control test cases - issue #278
-    'stat/TM_Shutter/RESULT': {
-        send: '{"Shutter1":{"Position":56,"Direction":0,"Target":56,"Tilt":0}}',
-        expect: { Shutter1_Position: 56, Shutter1_Direction: 0, Shutter1_Target: 56, Shutter1_Tilt: 0 },
-    },
-    'stat/Shutter_Device/RESULT': {
-        send: '{"Shutter2":{"Position":75,"Direction":1,"Target":100,"Tilt":25}}',
-        expect: { Shutter2_Position: 75, Shutter2_Direction: 1, Shutter2_Target: 100, Shutter2_Tilt: 25 },
-    },
-    'stat/MultiShutter/RESULT': {
-        send: '{"Shutter3":{"Position":0,"Direction":-1,"Target":0,"Tilt":50},"Shutter4":{"Position":100,"Direction":0,"Target":100,"Tilt":0}}',
-        expect: {
-            Shutter3_Position: 0,
-            Shutter3_Direction: -1,
-            Shutter3_Target: 0,
-            Shutter3_Tilt: 50,
-            Shutter4_Position: 100,
-            Shutter4_Direction: 0,
-            Shutter4_Target: 100,
-            Shutter4_Tilt: 0,
-        },
-    },
-    'tele/tasmota/RESULT': {
-        send: '{"IrReceived":{"Protocol":"FUJITSU_AC","Bits":128,"Data":"0x1463001010FE0930210000000000208F","Repeat":0,"IRHVAC":{"Vendor":"FUJITSU_AC","Model":1,"Mode":"Auto","Power":"On","Celsius":"On","Temp":18,"FanSpeed":"Auto","SwingV":"Off","SwingH":"Off","Quiet":"Off","Turbo":"Off","Econo":"Off","Light":"Off","Filter":"Off","Clean":"Off","Beep":"Off","Sleep":-1}}}',
-        expect: {
-            IrReceived_IRHVAC_Power: 'On',
-            IrReceived_IRHVAC_Light: 'Off',
-            IrReceived_IRHVAC_Mode: 'Auto',
-            IrReceived_IRHVAC_Vendor: 'FUJITSU_AC',
-            IrReceived_IRHVAC_Temp: 18,
-        },
-    },
-    // Zigbee bulb test case from issue #265
-    'tele/Zigbee_Coordinator_CC2530/SENSOR': {
-        send: '{"Time":"2022-05-05T20:49:08","ZbReceived":{"0x0856":{"Device":"0x0856","Name":"E14 Bulb","Power":1,"Dimmer":20,"Endpoint":1,"LinkQuality":65}}}',
-        expect: {
-            ZbReceived_0x0856_Power: 1,
-            ZbReceived_0x0856_Dimmer: 20,
-            ZbReceived_0x0856_Device: '0x0856',
-            ZbReceived_0x0856_Name: 'E14 Bulb',
-        },
-    },
-    // This rule must be last to ensure Emitter_1 maps to tasmota_0912A7 for the existing test
-    'tele/tasmota_0912A7/STATE': {
-        send: '{"Time":"2021-05-02T18:08:19","Uptime":"0T03:15:43","UptimeSec":11743,"Heap":26,"SleepMode":"Dynamic","Sleep":50,"LoadAvg":19,"MqttCount":11,"POWER":"ON","Wifi":{"AP":1,"SSId":"Skynet","BSSId":"3C:A6:2F:23:6A:94","Channel":6,"RSSI":52,"Signal":-74,"LinkCount":1,"Downtime":"0T00:00:07"}}',
-        expect: { Wifi_Downtime: '0T00:00:07' },
-    },
-    'tele/button_test/SENSOR': {
-        send: '{"Time":"2025-01-07T10:00:00","Button1":{"Action":"SINGLE"}}',
-        expect: { Button1_Action: 'SINGLE' },
-    },
-    'tele/klingel/RESULT': { send: '{"Button1":{"Action":"SINGLE"}}', expect: { Button1_Action: 'SINGLE' } },
-    'stat/button_device/RESULT': { send: '{"Button2":{"Action":"DOUBLE"}}', expect: { Button2_Action: 'DOUBLE' } },
-    'tele/IO-Board2_T/SENSOR': {
-        send: '{"Time":"2025-09-06T19:16:49","Switch1":"OFF","Switch2":"OFF","Switch3":"OFF","Switch4":"OFF","Switch5":"OFF","Switch7":"ON","Switch8":"OFF","Switch9":"OFF","ESP32":{"Temperature":33.9},"TempUnit":"C"}',
-        expect: {
-            Switch1: false,
-            Switch2: false,
-            Switch3: false,
-            Switch4: false,
-            Switch5: false,
-            Switch7: true,
-            Switch8: false,
-            Switch9: false,
-            ESP32_Temperature: 33.9,
-        },
-    },
-    // Comprehensive Switch1-28 test with all switches
-    'tele/esp32_switch_board/SENSOR': {
-        send: '{"Time":"2025-09-06T20:00:00","Switch1":"ON","Switch2":"OFF","Switch3":"ON","Switch4":"OFF","Switch5":"ON","Switch6":"OFF","Switch7":"ON","Switch8":"OFF","Switch9":"ON","Switch10":"OFF","Switch11":"ON","Switch12":"OFF","Switch13":"ON","Switch14":"OFF","Switch15":"ON","Switch16":"OFF","Switch17":"ON","Switch18":"OFF","Switch19":"ON","Switch20":"OFF","Switch21":"ON","Switch22":"OFF","Switch23":"ON","Switch24":"OFF","Switch25":"ON","Switch26":"OFF","Switch27":"ON","Switch28":"OFF"}',
-        expect: {
-            Switch1: true,
-            Switch2: false,
-            Switch3: true,
-            Switch4: false,
-            Switch5: true,
-            Switch6: false,
-            Switch7: true,
-            Switch8: false,
-            Switch9: true,
-            Switch10: false,
-            Switch11: true,
-            Switch12: false,
-            Switch13: true,
-            Switch14: false,
-            Switch15: true,
-            Switch16: false,
-            Switch17: true,
-            Switch18: false,
-            Switch19: true,
-            Switch20: false,
-            Switch21: true,
-            Switch22: false,
-            Switch23: true,
-            Switch24: false,
-            Switch25: true,
-            Switch26: false,
-            Switch27: true,
-            Switch28: false,
-        },
-    },
-    // Test Switch1-10 range with mixed states
-    'tele/tasmota_switch_10/SENSOR': {
-        send: '{"Time":"2025-09-06T20:01:00","Switch1":"OFF","Switch2":"ON","Switch3":"OFF","Switch4":"ON","Switch5":"OFF","Switch6":"ON","Switch7":"OFF","Switch8":"ON","Switch9":"OFF","Switch10":"ON"}',
-        expect: {
-            Switch1: false,
-            Switch2: true,
-            Switch3: false,
-            Switch4: true,
-            Switch5: false,
-            Switch6: true,
-            Switch7: false,
-            Switch8: true,
-            Switch9: false,
-            Switch10: true,
-        },
-    },
-    // Test Switch11-20 range
-    'tele/tasmota_switch_20/SENSOR': {
-        send: '{"Time":"2025-09-06T20:02:00","Switch11":"ON","Switch12":"ON","Switch13":"OFF","Switch14":"OFF","Switch15":"ON","Switch16":"ON","Switch17":"OFF","Switch18":"OFF","Switch19":"ON","Switch20":"ON"}',
-        expect: {
-            Switch11: true,
-            Switch12: true,
-            Switch13: false,
-            Switch14: false,
-            Switch15: true,
-            Switch16: true,
-            Switch17: false,
-            Switch18: false,
-            Switch19: true,
-            Switch20: true,
-        },
-    },
-    // Test Switch21-28 range
-    'tele/tasmota_switch_28/SENSOR': {
-        send: '{"Time":"2025-09-06T20:03:00","Switch21":"OFF","Switch22":"OFF","Switch23":"OFF","Switch24":"OFF","Switch25":"ON","Switch26":"ON","Switch27":"ON","Switch28":"ON"}',
-        expect: {
-            Switch21: false,
-            Switch22: false,
-            Switch23: false,
-            Switch24: false,
-            Switch25: true,
-            Switch26: true,
-            Switch27: true,
-            Switch28: true,
-        },
-    },
-    // OpenBeken LED topics - https://github.com/openshwprojects/OpenBK7231T_App/blob/main/docs/mqttTopics.md
-    // Testing with /get suffix (reports state)
-    'obk_lamp1/led_enableAll/get': { send: '1', expect: { led_enableAll: true } },
-    'obk_lamp1/led_dimmer/get': { send: '50', expect: { led_dimmer: 50 } },
-    'obk_lamp2/led_temperature/get': { send: '500', expect: { led_temperature: 500 } },
-    'obk_lamp2/led_basecolor_rgb/get': { send: '00FF00', expect: { led_basecolor_rgb: '00FF00' } },
-    // Testing without suffix (alternative mode)
-    'obk_lamp3/led_enableAll': { send: '0', expect: { led_enableAll: false } },
-    'obk_lamp3/led_dimmer': { send: '100', expect: { led_dimmer: 100 } },
-    'obk_lamp4/led_temperature': { send: '154', expect: { led_temperature: 154 } },
-    'obk_lamp4/led_basecolor_rgb': { send: 'FF0000', expect: { led_basecolor_rgb: 'FF0000' } },
-    'obk_lamp5/led_finalcolor_rgbcw/get': { send: 'FFFFFF0000', expect: { led_finalcolor_rgbcw: 'FFFFFF0000' } },
-    'obk_lamp5/led_basecolor_rgbcw': { send: 'FFAABB8899', expect: { led_basecolor_rgbcw: 'FFAABB8899' } },
-    'obk_lamp6/led_hue': { send: '180', expect: { led_hue: 180 } },
-    'obk_lamp6/led_saturation': { send: '75', expect: { led_saturation: 75 } },
-    // PulseTime test cases - issue #106
-    'stat/sonoff_relay/RESULT': {
-        send: '{"PulseTime1":{"Set":100,"Remaining":95}}',
-        expect: { PulseTime1_Set: 100, PulseTime1_Remaining: 95 },
-    },
-    'stat/multi_relay/RESULT': {
-        send: '{"PulseTime1":{"Set":50,"Remaining":0},"PulseTime2":{"Set":200,"Remaining":150}}',
-        expect: { PulseTime1_Set: 50, PulseTime1_Remaining: 0, PulseTime2_Set: 200, PulseTime2_Remaining: 150 },
-    },
-    'stat/sonoff4ch/RESULT': {
-        send: '{"PulseTime3":{"Set":300,"Remaining":250}}',
-        expect: { PulseTime3_Set: 300, PulseTime3_Remaining: 250 },
-    },
-    'stat/vents/RESULT': {
-        send: '{"PWM":{"PWM1":200,"PWM2":200}}',
-        expect: { PWM_PWM1: 200, PWM_PWM2: 200 },
-    },
-};
-
-// Encrypt helper for password
-function encryptLegacy(key, value) {
-    let result = '';
-    for (let i = 0; i < value.length; i++) {
-        result += String.fromCharCode(key[i % key.length].charCodeAt(0) ^ value.charCodeAt(i));
-    }
-    return result;
+/**
+ * Helper: build a Victron N/ topic
+ */
+function topic(service, instance, dbusPath) {
+    return `N/${PORTAL_ID}/${service}/${instance}/${dbusPath}`;
 }
+
+/**
+ * Helper: build a Victron JSON payload
+ */
+function payload(value) {
+    return JSON.stringify({ value });
+}
+
+/**
+ * Test rules – Victron MQTT messages to publish and expected ioBroker states.
+ *
+ * Each rule has:
+ *   topic    – full MQTT topic (N/{portalId}/...)
+ *   payload  – JSON string {"value": ...}
+ *   stateId  – expected ioBroker state path (under victron-cerbo.0.)
+ *   val      – expected value after coercion
+ *   type     – expected common.type  (optional)
+ *   role     – expected common.role  (optional)
+ *   unit     – expected common.unit  (optional)
+ *   write    – expected common.write (optional)
+ *   min      – expected common.min   (optional)
+ *   max      – expected common.max   (optional)
+ *   hasStates – if true, verify common.states is set (optional)
+ */
+const rules = [
+    // ========== battery ==========
+    {
+        name: 'Battery voltage (known state)',
+        topic: topic('battery', 256, 'Dc/0/Voltage'),
+        payload: payload(12.85),
+        stateId: 'battery.256.Dc.0.Voltage',
+        val: 12.85,
+        type: 'number',
+        role: 'value.voltage',
+        unit: 'V',
+    },
+    {
+        name: 'Battery current (known state)',
+        topic: topic('battery', 256, 'Dc/0/Current'),
+        payload: payload(-5.2),
+        stateId: 'battery.256.Dc.0.Current',
+        val: -5.2,
+        type: 'number',
+        role: 'value.current',
+        unit: 'A',
+    },
+    {
+        name: 'Battery power (known state)',
+        topic: topic('battery', 256, 'Dc/0/Power'),
+        payload: payload(-66.56),
+        stateId: 'battery.256.Dc.0.Power',
+        val: -66.56,
+        type: 'number',
+        role: 'value.power',
+        unit: 'W',
+    },
+    {
+        name: 'Battery temperature (known state)',
+        topic: topic('battery', 256, 'Dc/0/Temperature'),
+        payload: payload(25.3),
+        stateId: 'battery.256.Dc.0.Temperature',
+        val: 25.3,
+        type: 'number',
+        role: 'value.temperature',
+        unit: '°C',
+    },
+    {
+        name: 'Battery SOC (known state with min/max)',
+        topic: topic('battery', 256, 'Soc'),
+        payload: payload(85.5),
+        stateId: 'battery.256.Soc',
+        val: 85.5,
+        type: 'number',
+        role: 'value.battery',
+        unit: '%',
+        min: 0,
+        max: 100,
+    },
+    {
+        name: 'Battery capacity (known state)',
+        topic: topic('battery', 256, 'Capacity'),
+        payload: payload(200),
+        stateId: 'battery.256.Capacity',
+        val: 200,
+        type: 'number',
+        unit: 'Ah',
+    },
+    {
+        name: 'Battery product name (string)',
+        topic: topic('battery', 256, 'ProductName'),
+        payload: payload('SmartShunt 500A'),
+        stateId: 'battery.256.ProductName',
+        val: 'SmartShunt 500A',
+        type: 'string',
+        role: 'info.name',
+    },
+    {
+        name: 'Battery serial (string)',
+        topic: topic('battery', 256, 'Serial'),
+        payload: payload('HQ2145ABCDE'),
+        stateId: 'battery.256.Serial',
+        val: 'HQ2145ABCDE',
+        type: 'string',
+        role: 'info.serial',
+    },
+    {
+        name: 'Battery alarm (enum states)',
+        topic: topic('battery', 256, 'Alarms/Alarm'),
+        payload: payload(0),
+        stateId: 'battery.256.Alarms.Alarm',
+        val: 0,
+        type: 'number',
+        role: 'indicator.alarm',
+        hasStates: true,
+    },
+    {
+        name: 'Battery low voltage alarm',
+        topic: topic('battery', 256, 'Alarms/LowVoltage'),
+        payload: payload(1),
+        stateId: 'battery.256.Alarms.LowVoltage',
+        val: 1,
+        type: 'number',
+        role: 'indicator.alarm',
+        hasStates: true,
+    },
+    {
+        name: 'Battery consumed amphours',
+        topic: topic('battery', 256, 'ConsumedAmphours'),
+        payload: payload(12.4),
+        stateId: 'battery.256.ConsumedAmphours',
+        val: 12.4,
+        type: 'number',
+        unit: 'Ah',
+    },
+    {
+        name: 'Battery time to go',
+        topic: topic('battery', 256, 'TimeToGo'),
+        payload: payload(36000),
+        stateId: 'battery.256.TimeToGo',
+        val: 36000,
+        type: 'number',
+        unit: 's',
+    },
+    {
+        name: 'Battery starter voltage',
+        topic: topic('battery', 256, 'Dc/1/Voltage'),
+        payload: payload(12.1),
+        stateId: 'battery.256.Dc.1.Voltage',
+        val: 12.1,
+        type: 'number',
+        role: 'value.voltage',
+        unit: 'V',
+    },
+
+    // ========== solarcharger ==========
+    {
+        name: 'Solar charger PV power',
+        topic: topic('solarcharger', 258, 'Yield/Power'),
+        payload: payload(1250),
+        stateId: 'solarcharger.258.Yield.Power',
+        val: 1250,
+        type: 'number',
+        role: 'value.power',
+        unit: 'W',
+    },
+    {
+        name: 'Solar charger PV voltage',
+        topic: topic('solarcharger', 258, 'Pv/V'),
+        payload: payload(75.3),
+        stateId: 'solarcharger.258.Pv.V',
+        val: 75.3,
+        type: 'number',
+        role: 'value.voltage',
+        unit: 'V',
+    },
+    {
+        name: 'Solar charger PV current',
+        topic: topic('solarcharger', 258, 'Pv/I'),
+        payload: payload(16.6),
+        stateId: 'solarcharger.258.Pv.I',
+        val: 16.6,
+        type: 'number',
+        role: 'value.current',
+        unit: 'A',
+    },
+    {
+        name: 'Solar charger battery voltage',
+        topic: topic('solarcharger', 258, 'Dc/0/Voltage'),
+        payload: payload(13.2),
+        stateId: 'solarcharger.258.Dc.0.Voltage',
+        val: 13.2,
+        type: 'number',
+        role: 'value.voltage',
+        unit: 'V',
+    },
+    {
+        name: 'Solar charger state (enum)',
+        topic: topic('solarcharger', 258, 'State'),
+        payload: payload(3),
+        stateId: 'solarcharger.258.State',
+        val: 3,
+        type: 'number',
+        hasStates: true,
+    },
+    {
+        name: 'Solar charger error code',
+        topic: topic('solarcharger', 258, 'ErrorCode'),
+        payload: payload(0),
+        stateId: 'solarcharger.258.ErrorCode',
+        val: 0,
+        type: 'number',
+    },
+    {
+        name: 'Solar charger user yield',
+        topic: topic('solarcharger', 258, 'Yield/User'),
+        payload: payload(456.7),
+        stateId: 'solarcharger.258.Yield.User',
+        val: 456.7,
+        type: 'number',
+        unit: 'kWh',
+    },
+
+    // ========== system ==========
+    {
+        name: 'System battery voltage',
+        topic: topic('system', 0, 'Dc/Battery/Voltage'),
+        payload: payload(12.9),
+        stateId: 'system.0.Dc.Battery.Voltage',
+        val: 12.9,
+        type: 'number',
+        role: 'value.voltage',
+        unit: 'V',
+    },
+    {
+        name: 'System battery SOC',
+        topic: topic('system', 0, 'Dc/Battery/Soc'),
+        payload: payload(92),
+        stateId: 'system.0.Dc.Battery.Soc',
+        val: 92,
+        type: 'number',
+        role: 'value.battery',
+        unit: '%',
+    },
+    {
+        name: 'System PV power',
+        topic: topic('system', 0, 'Dc/Pv/Power'),
+        payload: payload(1450),
+        stateId: 'system.0.Dc.Pv.Power',
+        val: 1450,
+        type: 'number',
+        role: 'value.power',
+        unit: 'W',
+    },
+    {
+        name: 'System serial / portal ID',
+        topic: topic('system', 0, 'Serial'),
+        payload: payload(PORTAL_ID),
+        stateId: 'system.0.Serial',
+        val: PORTAL_ID,
+        type: 'string',
+        role: 'info.serial',
+    },
+    {
+        name: 'System DVCC (known number type, value 1)',
+        topic: topic('system', 0, 'Control/Dvcc'),
+        payload: payload(1),
+        stateId: 'system.0.Control.Dvcc',
+        val: 1,
+        type: 'number',
+    },
+    {
+        name: 'System MaxChargeCurrent (known number, value 150)',
+        topic: topic('system', 0, 'Control/MaxChargeCurrent'),
+        payload: payload(150),
+        stateId: 'system.0.Control.MaxChargeCurrent',
+        val: 150,
+        type: 'number',
+        unit: 'A',
+    },
+    {
+        name: 'Grid power L1',
+        topic: topic('system', 0, 'Ac/Grid/L1/Power'),
+        payload: payload(450.5),
+        stateId: 'system.0.Ac.Grid.L1.Power',
+        val: 450.5,
+        type: 'number',
+        role: 'value.power',
+        unit: 'W',
+    },
+    {
+        name: 'Consumption L1',
+        topic: topic('system', 0, 'Ac/Consumption/L1/Power'),
+        payload: payload(320),
+        stateId: 'system.0.Ac.Consumption.L1.Power',
+        val: 320,
+        type: 'number',
+        role: 'value.power',
+        unit: 'W',
+    },
+
+    // ========== inverter ==========
+    {
+        name: 'Inverter AC output voltage',
+        topic: topic('inverter', 276, 'Ac/Out/L1/V'),
+        payload: payload(230.1),
+        stateId: 'inverter.276.Ac.Out.L1.V',
+        val: 230.1,
+        type: 'number',
+        role: 'value.voltage',
+        unit: 'V',
+    },
+    {
+        name: 'Inverter AC output power',
+        topic: topic('inverter', 276, 'Ac/Out/L1/P'),
+        payload: payload(185),
+        stateId: 'inverter.276.Ac.Out.L1.P',
+        val: 185,
+        type: 'number',
+        role: 'value.power',
+        unit: 'W',
+    },
+    {
+        name: 'Inverter mode (writable, enum)',
+        topic: topic('inverter', 276, 'Mode'),
+        payload: payload(2),
+        stateId: 'inverter.276.Mode',
+        val: 2,
+        type: 'number',
+        role: 'level',
+        write: true,
+        hasStates: true,
+    },
+    {
+        name: 'Inverter state (enum)',
+        topic: topic('inverter', 276, 'State'),
+        payload: payload(9),
+        stateId: 'inverter.276.State',
+        val: 9,
+        type: 'number',
+        hasStates: true,
+    },
+    {
+        name: 'Inverter DC input voltage',
+        topic: topic('inverter', 276, 'Dc/0/Voltage'),
+        payload: payload(12.7),
+        stateId: 'inverter.276.Dc.0.Voltage',
+        val: 12.7,
+        type: 'number',
+        role: 'value.voltage',
+        unit: 'V',
+    },
+
+    // ========== vebus ==========
+    {
+        name: 'VEBus mode (writable)',
+        topic: topic('vebus', 276, 'Mode'),
+        payload: payload(3),
+        stateId: 'vebus.276.Mode',
+        val: 3,
+        type: 'number',
+        role: 'level',
+        write: true,
+    },
+    {
+        name: 'VEBus state (enum)',
+        topic: topic('vebus', 276, 'State'),
+        payload: payload(5),
+        stateId: 'vebus.276.State',
+        val: 5,
+        type: 'number',
+        hasStates: true,
+    },
+    {
+        name: 'VEBus AC output voltage L1',
+        topic: topic('vebus', 276, 'Ac/Out/L1/V'),
+        payload: payload(229.5),
+        stateId: 'vebus.276.Ac.Out.L1.V',
+        val: 229.5,
+        type: 'number',
+        role: 'value.voltage',
+        unit: 'V',
+    },
+    {
+        name: 'VEBus SOC',
+        topic: topic('vebus', 276, 'Soc'),
+        payload: payload(88),
+        stateId: 'vebus.276.Soc',
+        val: 88,
+        type: 'number',
+        role: 'value.battery',
+        unit: '%',
+    },
+
+    // ========== charger ==========
+    {
+        name: 'Charger output voltage',
+        topic: topic('charger', 261, 'Dc/0/Voltage'),
+        payload: payload(14.2),
+        stateId: 'charger.261.Dc.0.Voltage',
+        val: 14.2,
+        type: 'number',
+        role: 'value.voltage',
+        unit: 'V',
+    },
+    {
+        name: 'Charger AC input current limit (writable)',
+        topic: topic('charger', 261, 'Ac/In/CurrentLimit'),
+        payload: payload(16),
+        stateId: 'charger.261.Ac.In.CurrentLimit',
+        val: 16,
+        type: 'number',
+        role: 'level',
+        write: true,
+        unit: 'A',
+    },
+    {
+        name: 'Charger state (enum)',
+        topic: topic('charger', 261, 'State'),
+        payload: payload(4),
+        stateId: 'charger.261.State',
+        val: 4,
+        type: 'number',
+        hasStates: true,
+    },
+    {
+        name: 'Charger mode (writable, enum)',
+        topic: topic('charger', 261, 'Mode'),
+        payload: payload(1),
+        stateId: 'charger.261.Mode',
+        val: 1,
+        type: 'number',
+        role: 'level',
+        write: true,
+        hasStates: true,
+    },
+
+    // ========== grid ==========
+    {
+        name: 'Grid power L1',
+        topic: topic('grid', 30, 'Ac/L1/Power'),
+        payload: payload(550),
+        stateId: 'grid.30.Ac.L1.Power',
+        val: 550,
+        type: 'number',
+        role: 'value.power',
+        unit: 'W',
+    },
+    {
+        name: 'Grid energy imported',
+        topic: topic('grid', 30, 'Ac/Energy/Forward'),
+        payload: payload(12345.67),
+        stateId: 'grid.30.Ac.Energy.Forward',
+        val: 12345.67,
+        type: 'number',
+        unit: 'kWh',
+    },
+    {
+        name: 'Grid energy exported',
+        topic: topic('grid', 30, 'Ac/Energy/Reverse'),
+        payload: payload(8765.43),
+        stateId: 'grid.30.Ac.Energy.Reverse',
+        val: 8765.43,
+        type: 'number',
+        unit: 'kWh',
+    },
+
+    // ========== tank ==========
+    {
+        name: 'Tank level (min/max)',
+        topic: topic('tank', 100, 'Level'),
+        payload: payload(67.5),
+        stateId: 'tank.100.Level',
+        val: 67.5,
+        type: 'number',
+        unit: '%',
+        min: 0,
+        max: 100,
+    },
+    {
+        name: 'Tank fluid type (enum)',
+        topic: topic('tank', 100, 'FluidType'),
+        payload: payload(1),
+        stateId: 'tank.100.FluidType',
+        val: 1,
+        type: 'number',
+        hasStates: true,
+    },
+    {
+        name: 'Tank remaining volume',
+        topic: topic('tank', 100, 'Remaining'),
+        payload: payload(0.135),
+        stateId: 'tank.100.Remaining',
+        val: 0.135,
+        type: 'number',
+        unit: 'm³',
+    },
+
+    // ========== temperature ==========
+    {
+        name: 'Temperature sensor',
+        topic: topic('temperature', 24, 'Temperature'),
+        payload: payload(23.7),
+        stateId: 'temperature.24.Temperature',
+        val: 23.7,
+        type: 'number',
+        role: 'value.temperature',
+        unit: '°C',
+    },
+    {
+        name: 'Temperature sensor status',
+        topic: topic('temperature', 24, 'Status'),
+        payload: payload(0),
+        stateId: 'temperature.24.Status',
+        val: 0,
+        type: 'number',
+        hasStates: true,
+    },
+
+    // ========== pvinverter ==========
+    {
+        name: 'PV inverter power L1',
+        topic: topic('pvinverter', 20, 'Ac/L1/Power'),
+        payload: payload(980),
+        stateId: 'pvinverter.20.Ac.L1.Power',
+        val: 980,
+        type: 'number',
+        role: 'value.power',
+        unit: 'W',
+    },
+    {
+        name: 'PV inverter energy total',
+        topic: topic('pvinverter', 20, 'Ac/Energy/Forward'),
+        payload: payload(5432.1),
+        stateId: 'pvinverter.20.Ac.Energy.Forward',
+        val: 5432.1,
+        type: 'number',
+        unit: 'kWh',
+    },
+
+    // ========== settings (writable) ==========
+    {
+        name: 'Grid setpoint (writable)',
+        topic: topic('settings', 0, 'Settings/CGwacs/AcPowerSetPoint'),
+        payload: payload(50),
+        stateId: 'settings.0.Settings.CGwacs.AcPowerSetPoint',
+        val: 50,
+        type: 'number',
+        write: true,
+        unit: 'W',
+    },
+    {
+        name: 'Minimum SOC limit (writable, min/max)',
+        topic: topic('settings', 0, 'Settings/CGwacs/BatteryLife/MinimumSocLimit'),
+        payload: payload(20),
+        stateId: 'settings.0.Settings.CGwacs.BatteryLife.MinimumSocLimit',
+        val: 20,
+        type: 'number',
+        write: true,
+        min: 0,
+        max: 100,
+    },
+    {
+        name: 'Max charge power (writable)',
+        topic: topic('settings', 0, 'Settings/CGwacs/MaxChargePower'),
+        payload: payload(3000),
+        stateId: 'settings.0.Settings.CGwacs.MaxChargePower',
+        val: 3000,
+        type: 'number',
+        write: true,
+        unit: 'W',
+    },
+    {
+        name: 'ESS Battery life state (writable, enum)',
+        topic: topic('settings', 0, 'Settings/CGwacs/BatteryLife/State'),
+        payload: payload(10),
+        stateId: 'settings.0.Settings.CGwacs.BatteryLife.State',
+        val: 10,
+        type: 'number',
+        write: true,
+        hasStates: true,
+    },
+    {
+        name: 'ESS mode (writable, enum)',
+        topic: topic('settings', 0, 'Settings/CGwacs/Hub4Mode'),
+        payload: payload(1),
+        stateId: 'settings.0.Settings.CGwacs.Hub4Mode',
+        val: 1,
+        type: 'number',
+        write: true,
+        hasStates: true,
+    },
+
+    // ========== platform ==========
+    {
+        name: 'Platform device model',
+        topic: topic('platform', 0, 'Device/Model'),
+        payload: payload('Cerbo GX'),
+        stateId: 'platform.0.Device.Model',
+        val: 'Cerbo GX',
+        type: 'string',
+        role: 'info.name',
+    },
+    {
+        name: 'Platform unique ID',
+        topic: topic('platform', 0, 'Device/UniqueId'),
+        payload: payload(PORTAL_ID),
+        stateId: 'platform.0.Device.UniqueId',
+        val: PORTAL_ID,
+        type: 'string',
+        role: 'info.serial',
+    },
+    {
+        name: 'Platform firmware version',
+        topic: topic('platform', 0, 'Firmware/Installed/Version'),
+        payload: payload('v3.30'),
+        stateId: 'platform.0.Firmware.Installed.Version',
+        val: 'v3.30',
+        type: 'string',
+        role: 'info.firmware',
+    },
+
+    // ========== Name inference (states NOT in knownStates) ==========
+    {
+        name: 'Inferred: Voltage from name',
+        topic: topic('custom', 0, 'BusVoltage'),
+        payload: payload(48.2),
+        stateId: 'custom.0.BusVoltage',
+        val: 48.2,
+        type: 'number',
+        role: 'value.voltage',
+        unit: 'V',
+    },
+    {
+        name: 'Inferred: Temperature from name',
+        topic: topic('custom', 0, 'HeatsinkTemperature'),
+        payload: payload(35),
+        stateId: 'custom.0.HeatsinkTemperature',
+        val: 35,
+        type: 'number',
+        role: 'value.temperature',
+        unit: '°C',
+    },
+    {
+        name: 'Inferred: Power from name',
+        topic: topic('custom', 0, 'MaxDischargePower'),
+        payload: payload(5000),
+        stateId: 'custom.0.MaxDischargePower',
+        val: 5000,
+        type: 'number',
+        role: 'value.power',
+        unit: 'W',
+    },
+    {
+        name: 'Inferred: Frequency from name',
+        topic: topic('custom', 0, 'Frequency'),
+        payload: payload(50.01),
+        stateId: 'custom.0.Frequency',
+        val: 50.01,
+        type: 'number',
+        unit: 'Hz',
+    },
+    {
+        name: 'Inferred: generic number (no pattern match)',
+        topic: topic('custom', 0, 'SomethingUnknown'),
+        payload: payload(42),
+        stateId: 'custom.0.SomethingUnknown',
+        val: 42,
+        type: 'number',
+        role: 'value',
+    },
+    {
+        name: 'Inferred: generic string',
+        topic: topic('custom', 0, 'Description'),
+        payload: payload('test string value'),
+        stateId: 'custom.0.Description',
+        val: 'test string value',
+        type: 'string',
+        role: 'state',
+    },
+
+    // ========== Boolean inference (0/1 → true/false) ==========
+    {
+        name: 'Boolean: Connected 1 → true',
+        topic: topic('custom', 0, 'Connected'),
+        payload: payload(1),
+        stateId: 'custom.0.Connected',
+        val: true,
+        type: 'boolean',
+        role: 'indicator.connected',
+    },
+    {
+        name: 'Boolean: Active 0 → false',
+        topic: topic('custom', 0, 'Active'),
+        payload: payload(0),
+        stateId: 'custom.0.Active',
+        val: false,
+        type: 'boolean',
+        role: 'indicator',
+    },
+    {
+        name: 'Boolean: Silenced 0 → false',
+        topic: topic('custom', 0, 'Silenced'),
+        payload: payload(0),
+        stateId: 'custom.0.Silenced',
+        val: false,
+        type: 'boolean',
+        role: 'indicator',
+    },
+    {
+        name: 'Boolean: Enabled 1 → true',
+        topic: topic('custom', 0, 'Enabled'),
+        payload: payload(1),
+        stateId: 'custom.0.Enabled',
+        val: true,
+        type: 'boolean',
+        role: 'indicator',
+    },
+    {
+        name: 'Boolean: Present 1 → true',
+        topic: topic('custom', 0, 'Present'),
+        payload: payload(1),
+        stateId: 'custom.0.Present',
+        val: true,
+        type: 'boolean',
+        role: 'indicator',
+    },
+    {
+        name: 'Boolean: BmsPresent 0 → false',
+        topic: topic('custom', 0, 'BmsPresent'),
+        payload: payload(0),
+        stateId: 'custom.0.BmsPresent',
+        val: false,
+        type: 'boolean',
+        role: 'indicator',
+    },
+
+    // ========== Type coercion – the specific bugs ==========
+    {
+        name: 'Coercion: MaxChargeCurrent receives false → 0',
+        topic: topic('system', 0, 'Control/MaxChargeCurrent'),
+        payload: payload(false),
+        stateId: 'system.0.Control.MaxChargeCurrent',
+        val: 0,
+        type: 'number',
+    },
+    {
+        name: 'Coercion: MaxChargeCurrent receives true → 1',
+        topic: topic('system', 0, 'Control/MaxChargeCurrent'),
+        payload: payload(true),
+        stateId: 'system.0.Control.MaxChargeCurrent',
+        val: 1,
+        type: 'number',
+    },
+    {
+        name: 'Coercion: MaxChargeCurrent back to number 200',
+        topic: topic('system', 0, 'Control/MaxChargeCurrent'),
+        payload: payload(200),
+        stateId: 'system.0.Control.MaxChargeCurrent',
+        val: 200,
+        type: 'number',
+    },
+    {
+        name: 'Coercion: Dvcc receives 0 stays number',
+        topic: topic('system', 0, 'Control/Dvcc'),
+        payload: payload(0),
+        stateId: 'system.0.Control.Dvcc',
+        val: 0,
+        type: 'number',
+    },
+    {
+        name: 'Coercion: Silenced with number 1 → boolean true',
+        topic: topic('custom', 0, 'Silenced'),
+        payload: payload(1),
+        stateId: 'custom.0.Silenced',
+        val: true,
+        type: 'boolean',
+    },
+    {
+        name: 'Coercion: Connected with number 0 → boolean false',
+        topic: topic('custom', 0, 'Connected'),
+        payload: payload(0),
+        stateId: 'custom.0.Connected',
+        val: false,
+        type: 'boolean',
+    },
+];
 
 // Run integration tests
 tests.integration(path.join(__dirname, '..'), {
     defineAdditionalTests({ suite }) {
-        suite('MQTT Server Tests', (getHarness) => {
+        suite('Victron Cerbo MQTT Client Tests', (getHarness) => {
             let harness;
-            let mqttClientEmitter;
-            let mqttClientDetector;
-            let lastReceivedTopic1 = null;
-            let lastReceivedMessage1 = null;
-            let lastReceivedTopic2 = null;
-            let lastReceivedMessage2 = null;
+            let broker;
+            let server;
+            let adapterPublished;
 
-            before(async function() {
+            /**
+             * Publish a message from the mock broker to all subscribers (the adapter).
+             */
+            function publishFromBroker(mqttTopic, mqttPayload) {
+                return new Promise((resolve, reject) => {
+                    broker.publish(
+                        {
+                            topic: mqttTopic,
+                            payload: Buffer.from(mqttPayload),
+                            qos: 0,
+                            retain: false,
+                            cmd: 'publish',
+                            dup: false,
+                        },
+                        (err) => {
+                            if (err) return reject(err);
+                            resolve();
+                        },
+                    );
+                });
+            }
+
+            before(async function () {
                 this.timeout(60000);
+
+                // Start mock MQTT broker (aedes)
+                const Aedes = require('aedes');
+                const net = require('net');
+                broker = new Aedes();
+                server = net.createServer(broker.handle);
+                await new Promise((resolve) => server.listen(MQTT_PORT, resolve));
+                console.log(`Mock MQTT broker started on port ${MQTT_PORT}`);
+
+                // Track messages published by the adapter (client !== null means from a client)
+                adapterPublished = [];
+                broker.on('publish', (packet, client) => {
+                    if (client) {
+                        adapterPublished.push({
+                            topic: packet.topic,
+                            payload: packet.payload.toString(),
+                        });
+                    }
+                });
+
                 harness = getHarness();
 
-                // Get system.config to encrypt password
-                const systemConfig = await harness.objects.getObjectAsync('system.config');
-                const secret = (systemConfig && systemConfig.native && systemConfig.native.secret) || 'Zgfr56gFe87jJOM';
-
-                // Configure adapter
+                // Configure adapter to connect to our mock broker
                 await harness.changeAdapterConfig('victron-cerbo', {
                     native: {
-                        user: 'user',
-                        password: encryptLegacy(secret, 'pass1'),
-                        TELE_MARGINS: true,
-                        STAT_RESULT: true
-                    }
+                        mqttHost: '127.0.0.1',
+                        mqttPort: MQTT_PORT,
+                        portalId: PORTAL_ID,
+                        keepaliveInterval: 5,
+                        user: '',
+                        password: '',
+                        mqttClientId: 'iobroker_test_client',
+                    },
                 });
 
                 // Start adapter
                 await harness.startAdapterAndWait();
 
-                // Wait for adapter to initialize MQTT server
-                await new Promise(resolve => setTimeout(resolve, 2000));
-
-                // Start MQTT test clients
-                mqttClientEmitter = new MqttClient(
-                    (connected) => {
-                        if (connected) {
-                            console.log('Test MQTT Emitter connected to broker');
-                        }
-                    },
-                    (topic, message) => {
-                        lastReceivedTopic1 = topic;
-                        lastReceivedMessage1 = message ? message.toString() : null;
-                    },
-                    { name: 'Emitter*1', user: 'user', pass: 'pass1' }
-                );
-
-                mqttClientDetector = new MqttClient(
-                    (connected) => {
-                        if (connected) {
-                            console.log('Test MQTT Detector connected to broker');
-                        }
-                    },
-                    (topic, message) => {
-                        lastReceivedTopic2 = topic;
-                        lastReceivedMessage2 = message ? message.toString() : null;
-                    },
-                    { name: 'Detector-1', user: 'user', pass: 'pass1' }
-                );
-
-                // Wait for clients to connect
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                // Wait for MQTT connection and subscription
+                await new Promise((resolve) => setTimeout(resolve, 3000));
             });
 
-            after(async function() {
+            after(async function () {
                 this.timeout(10000);
-                if (mqttClientEmitter) {
-                    mqttClientEmitter.stop();
+                if (broker) {
+                    broker.close();
                 }
-                if (mqttClientDetector) {
-                    mqttClientDetector.stop();
+                if (server) {
+                    server.close();
                 }
             });
 
-            it('Should have adapter connected with clients', async function() {
+            // ===== Connection test =====
+            it('Should connect to the MQTT broker', async function () {
                 this.timeout(5000);
-
-                // Check if adapter has connection info
-                const connectionState = await harness.states.getStateAsync('victron-cerbo.0.info.connection');
-                if (!connectionState) {
-                    throw new Error('connectionState not found');
-                }
-                if (typeof connectionState.val !== 'string') {
-                    throw new Error('typeof connectionState is not string');
-                }
-                // Should have at least one client connected
-                if (connectionState.val.indexOf(',') === -1) {
-                    throw new Error('Expected at least two clients connected (comma-separated)');
+                const state = await harness.states.getStateAsync('victron-cerbo.0.info.connection');
+                if (!state || state.val !== true) {
+                    throw new Error(
+                        `Expected info.connection = true, got ${state ? state.val : 'null'}`,
+                    );
                 }
             });
 
-            // Create tests for each MQTT rule
-            for (const topic in rules) {
-                const rule = rules[topic];
+            // ===== Keepalive test =====
+            it('Should send keepalive messages', async function () {
+                this.timeout(10000);
+                adapterPublished.length = 0;
+                // Wait for a keepalive (interval is 5s)
+                await new Promise((resolve) => setTimeout(resolve, 6000));
+                const keepalives = adapterPublished.filter(
+                    (m) => m.topic === `R/${PORTAL_ID}/keepalive`,
+                );
+                if (keepalives.length === 0) {
+                    throw new Error('Expected at least one keepalive message');
+                }
+            });
 
-                it(`Should process MQTT message: ${topic}`, async function() {
-                    this.timeout(3000);
+            // ===== Generate a test for each rule =====
+            for (const rule of rules) {
+                it(`Should process: ${rule.name}`, async function () {
+                    this.timeout(5000);
 
-                    // Publish message
-                    await new Promise((resolve, reject) => {
-                        mqttClientEmitter.publish(topic, rule.send, (err) => {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                    });
+                    await publishFromBroker(rule.topic, rule.payload);
+                    await new Promise((resolve) => setTimeout(resolve, 500));
 
-                    // Wait for message to be processed
-                    await new Promise(resolve => setTimeout(resolve, 300));
+                    const fullId = `victron-cerbo.0.${rule.stateId}`;
 
-                    // Check expected states
-                    for (const stateId in rule.expect) {
-                        const expectedValue = rule.expect[stateId];
-                        const fullStateId = `victron-cerbo.0.Emitter_1.${stateId}`;
+                    // 1) Object must exist as type "state"
+                    const obj = await harness.objects.getObjectAsync(fullId);
+                    if (!obj) {
+                        throw new Error(`Object ${fullId} should exist`);
+                    }
+                    if (obj.type !== 'state') {
+                        throw new Error(
+                            `Object ${fullId} should be type "state", got "${obj.type}"`,
+                        );
+                    }
 
-                        if (expectedValue !== null) {
-                            // Object and state should exist
-                            const obj = await harness.objects.getObjectAsync(fullStateId);
-                            if (!obj) {
-                                throw new Error(`Object ${fullStateId} should exist`);
-                            }
-                            if (obj.type !== 'state') {
-                                throw new Error(`Object ${fullStateId} should have type 'state', but has '${obj.type}'`);
-                            }
+                    // 2) Value must match
+                    const state = await harness.states.getStateAsync(fullId);
+                    if (!state) {
+                        throw new Error(`State ${fullId} should have a value`);
+                    }
+                    if (state.val !== rule.val) {
+                        throw new Error(
+                            `${fullId}: expected val=${JSON.stringify(rule.val)}, got ${JSON.stringify(state.val)}`,
+                        );
+                    }
+                    if (state.ack !== true) {
+                        throw new Error(`${fullId} should have ack=true`);
+                    }
 
-                            const state = await harness.states.getStateAsync(fullStateId);
-                            if (!state) {
-                                throw new Error(`State ${fullStateId} should exist`);
-                            }
-                            if (state.val !== expectedValue) {
-                                throw new Error(`State ${fullStateId} should have value '${expectedValue}', but has '${state.val}'`);
-                            }if (state.ack !== true) {
-                                throw new Error(`State ${fullStateId} should have ack=true, but has ack=${state.ack}`);
-                            }
-                        } else {
-                            // State should not exist or object should not exist
-                            const obj = await harness.objects.getObjectAsync(fullStateId);
-                            if (obj !== null) {
-                                throw new Error(`Object ${fullStateId} should not exist`);
-                            }
-                        }
+                    // 3) Type
+                    if (rule.type && obj.common.type !== rule.type) {
+                        throw new Error(
+                            `${fullId}: expected type="${rule.type}", got "${obj.common.type}"`,
+                        );
+                    }
+
+                    // 4) Role
+                    if (rule.role && obj.common.role !== rule.role) {
+                        throw new Error(
+                            `${fullId}: expected role="${rule.role}", got "${obj.common.role}"`,
+                        );
+                    }
+
+                    // 5) Unit
+                    if (rule.unit && obj.common.unit !== rule.unit) {
+                        throw new Error(
+                            `${fullId}: expected unit="${rule.unit}", got "${obj.common.unit}"`,
+                        );
+                    }
+
+                    // 6) Write flag
+                    if (rule.write !== undefined && obj.common.write !== rule.write) {
+                        throw new Error(
+                            `${fullId}: expected write=${rule.write}, got ${obj.common.write}`,
+                        );
+                    }
+
+                    // 7) Min
+                    if (rule.min !== undefined && obj.common.min !== rule.min) {
+                        throw new Error(
+                            `${fullId}: expected min=${rule.min}, got ${obj.common.min}`,
+                        );
+                    }
+
+                    // 8) Max
+                    if (rule.max !== undefined && obj.common.max !== rule.max) {
+                        throw new Error(
+                            `${fullId}: expected max=${rule.max}, got ${obj.common.max}`,
+                        );
+                    }
+
+                    // 9) States enum
+                    if (rule.hasStates && !obj.common.states) {
+                        throw new Error(
+                            `${fullId}: expected common.states to be set`,
+                        );
                     }
                 });
             }
 
-            it('Should send command to MQTT when state changes', async function() {
+            // ===== Object expansion test =====
+            it('Should expand object values into individual states', async function () {
                 this.timeout(5000);
 
-                // Clear received messages
-                lastReceivedTopic1 = null;
-                lastReceivedMessage1 = null;
-                lastReceivedTopic2 = null;
-                lastReceivedMessage2 = null;
+                await publishFromBroker(
+                    topic('battery', 257, 'Info'),
+                    payload({ MaxChargeVoltage: 14.4, MaxChargeCurrent: 50, MaxDischargeCurrent: 100 }),
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500));
 
-                // Change state
-                await harness.states.setStateAsync('victron-cerbo.0.Emitter_1.POWER', false, false);
-
-                // Wait for MQTT message
-                await new Promise(resolve => setTimeout(resolve, 1500));
-
-                // Check if message was received
-                const receivedTopic = lastReceivedTopic1 || lastReceivedTopic2;
-                const receivedMessage = lastReceivedMessage1 || lastReceivedMessage2;
-
-                if (receivedTopic !== 'cmnd/tasmota_0912A7/POWER') {
-                    throw new Error(`Expected topic 'cmnd/tasmota_0912A7/POWER', but received '${receivedTopic}'`);
+                // Check channel exists
+                const channel = await harness.objects.getObjectAsync('victron-cerbo.0.battery.257.Info');
+                if (!channel || channel.type !== 'channel') {
+                    throw new Error('Expected battery.257.Info to be a channel');
                 }
-                if (receivedMessage !== 'OFF') {
-                    throw new Error(`Expected message 'OFF', but received '${receivedMessage}'`);
+
+                // Check individual states
+                const voltage = await harness.states.getStateAsync('victron-cerbo.0.battery.257.Info.MaxChargeVoltage');
+                if (!voltage || voltage.val !== 14.4) {
+                    throw new Error(`Expected MaxChargeVoltage=14.4, got ${voltage?.val}`);
+                }
+
+                const current = await harness.states.getStateAsync('victron-cerbo.0.battery.257.Info.MaxChargeCurrent');
+                if (!current || current.val !== 50) {
+                    throw new Error(`Expected MaxChargeCurrent=50, got ${current?.val}`);
+                }
+
+                const discharge = await harness.states.getStateAsync('victron-cerbo.0.battery.257.Info.MaxDischargeCurrent');
+                if (!discharge || discharge.val !== 100) {
+                    throw new Error(`Expected MaxDischargeCurrent=100, got ${discharge?.val}`);
                 }
             });
 
-            it('Should have correct role for ENERGY.Power object', async function() {
-                const obj = await harness.objects.getObjectAsync('victron-cerbo.0.Emitter_1.ENERGY.Power');
+            // ===== Array expansion test =====
+            it('Should expand array values into indexed channels', async function () {
+                this.timeout(5000);
+
+                await publishFromBroker(
+                    topic('system', 0, 'Batteries'),
+                    payload([
+                        { soc: 85, voltage: 12.8 },
+                        { soc: 90, voltage: 13.1 },
+                    ]),
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                // Parent channel
+                const parent = await harness.objects.getObjectAsync('victron-cerbo.0.system.0.Batteries');
+                if (!parent || parent.type !== 'channel') {
+                    throw new Error('Expected system.0.Batteries to be a channel');
+                }
+
+                // Array element 0
+                const soc0 = await harness.states.getStateAsync('victron-cerbo.0.system.0.Batteries.0.soc');
+                if (!soc0 || soc0.val !== 85) {
+                    throw new Error(`Expected Batteries.0.soc=85, got ${soc0?.val}`);
+                }
+
+                const voltage0 = await harness.states.getStateAsync('victron-cerbo.0.system.0.Batteries.0.voltage');
+                if (!voltage0 || voltage0.val !== 12.8) {
+                    throw new Error(`Expected Batteries.0.voltage=12.8, got ${voltage0?.val}`);
+                }
+
+                // Array element 1
+                const soc1 = await harness.states.getStateAsync('victron-cerbo.0.system.0.Batteries.1.soc');
+                if (!soc1 || soc1.val !== 90) {
+                    throw new Error(`Expected Batteries.1.soc=90, got ${soc1?.val}`);
+                }
+
+                const voltage1 = await harness.states.getStateAsync('victron-cerbo.0.system.0.Batteries.1.voltage');
+                if (!voltage1 || voltage1.val !== 13.1) {
+                    throw new Error(`Expected Batteries.1.voltage=13.1, got ${voltage1?.val}`);
+                }
+            });
+
+            // ===== Nested object + array expansion (Notifications with Silenced boolean) =====
+            it('Should expand deeply nested objects with arrays', async function () {
+                this.timeout(5000);
+
+                await publishFromBroker(
+                    topic('platform', 0, 'Notifications'),
+                    payload([
+                        { Acknowledge: 0, Silenced: 0, Type: 'warning' },
+                        { Acknowledge: 1, Silenced: 1, Type: 'alarm' },
+                    ]),
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                // Check Silenced states (should be boolean from inference)
+                const silenced0 = await harness.states.getStateAsync('victron-cerbo.0.platform.0.Notifications.0.Silenced');
+                if (!silenced0) {
+                    throw new Error('Expected Notifications.0.Silenced to exist');
+                }
+                if (silenced0.val !== false) {
+                    throw new Error(`Expected Notifications.0.Silenced=false, got ${silenced0.val}`);
+                }
+
+                const silenced1 = await harness.states.getStateAsync('victron-cerbo.0.platform.0.Notifications.1.Silenced');
+                if (!silenced1) {
+                    throw new Error('Expected Notifications.1.Silenced to exist');
+                }
+                if (silenced1.val !== true) {
+                    throw new Error(`Expected Notifications.1.Silenced=true, got ${silenced1.val}`);
+                }
+
+                // Check Silenced object type is boolean
+                const silencedObj = await harness.objects.getObjectAsync('victron-cerbo.0.platform.0.Notifications.1.Silenced');
+                if (silencedObj.common.type !== 'boolean') {
+                    throw new Error(`Expected Silenced type=boolean, got ${silencedObj.common.type}`);
+                }
+
+                // Check Type is string
+                const type1 = await harness.states.getStateAsync('victron-cerbo.0.platform.0.Notifications.1.Type');
+                if (!type1 || type1.val !== 'alarm') {
+                    throw new Error(`Expected Notifications.1.Type="alarm", got ${type1?.val}`);
+                }
+            });
+
+            // ===== Write-back test: inverter mode =====
+            it('Should publish W/ topic when writable state changes', async function () {
+                this.timeout(5000);
+
+                // Ensure state exists
+                await publishFromBroker(topic('inverter', 276, 'Mode'), payload(2));
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                // Clear tracked messages
+                adapterPublished.length = 0;
+
+                // Simulate user change (ack=false)
+                await harness.states.setStateAsync('victron-cerbo.0.inverter.276.Mode', 4, false);
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                const writeMsg = adapterPublished.find((m) => m.topic.startsWith('W/'));
+                if (!writeMsg) {
+                    throw new Error('Expected a W/ topic to be published');
+                }
+                if (writeMsg.topic !== `W/${PORTAL_ID}/inverter/276/Mode`) {
+                    throw new Error(
+                        `Expected topic W/${PORTAL_ID}/inverter/276/Mode, got ${writeMsg.topic}`,
+                    );
+                }
+                const parsed = JSON.parse(writeMsg.payload);
+                if (parsed.value !== 4) {
+                    throw new Error(`Expected payload value 4, got ${parsed.value}`);
+                }
+            });
+
+            // ===== Write-back test: settings =====
+            it('Should write settings via W/ topic', async function () {
+                this.timeout(5000);
+
+                // Ensure state exists
+                await publishFromBroker(
+                    topic('settings', 0, 'Settings/CGwacs/AcPowerSetPoint'),
+                    payload(50),
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                adapterPublished.length = 0;
+
+                await harness.states.setStateAsync(
+                    'victron-cerbo.0.settings.0.Settings.CGwacs.AcPowerSetPoint',
+                    100,
+                    false,
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                const writeMsg = adapterPublished.find(
+                    (m) => m.topic === `W/${PORTAL_ID}/settings/0/Settings/CGwacs/AcPowerSetPoint`,
+                );
+                if (!writeMsg) {
+                    throw new Error('Expected W/ topic for settings write-back');
+                }
+                const parsed = JSON.parse(writeMsg.payload);
+                if (parsed.value !== 100) {
+                    throw new Error(`Expected value 100, got ${parsed.value}`);
+                }
+            });
+
+            // ===== Read-only state should NOT allow write =====
+            it('Should not publish W/ topic for read-only states', async function () {
+                this.timeout(5000);
+
+                // Ensure state exists
+                await publishFromBroker(topic('battery', 256, 'Dc/0/Voltage'), payload(12.85));
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                adapterPublished.length = 0;
+
+                await harness.states.setStateAsync(
+                    'victron-cerbo.0.battery.256.Dc.0.Voltage',
+                    13.0,
+                    false,
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                const writeMsg = adapterPublished.find((m) =>
+                    m.topic === `W/${PORTAL_ID}/battery/256/Dc/0/Voltage`,
+                );
+                if (writeMsg) {
+                    throw new Error('Should not publish W/ topic for read-only state');
+                }
+            });
+
+            // ===== Non-JSON payload should be ignored =====
+            it('Should ignore non-JSON payloads', async function () {
+                this.timeout(5000);
+
+                // First set a known value
+                await publishFromBroker(topic('battery', 256, 'Dc/0/Voltage'), payload(12.85));
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                // Now send invalid JSON
+                await publishFromBroker(
+                    `N/${PORTAL_ID}/battery/256/Dc/0/Voltage`,
+                    'this is not json',
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                // Value should still be 12.85
+                const state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage');
+                if (state && state.val !== 12.85) {
+                    throw new Error(`Expected value 12.85 to be preserved, got ${state.val}`);
+                }
+            });
+
+            // ===== Undefined value (empty JSON) should skip =====
+            it('Should skip messages with undefined value', async function () {
+                this.timeout(5000);
+
+                await publishFromBroker(
+                    `N/${PORTAL_ID}/custom/0/SkipThis`,
+                    JSON.stringify({}),
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                const obj = await harness.objects.getObjectAsync('victron-cerbo.0.custom.0.SkipThis');
+                if (obj) {
+                    throw new Error('State should not be created for undefined value');
+                }
+            });
+
+            // ===== Wrong prefix (not N/) should be ignored =====
+            it('Should ignore non-N/ topics', async function () {
+                this.timeout(5000);
+
+                await publishFromBroker(
+                    `X/${PORTAL_ID}/battery/256/Dc/0/Voltage`,
+                    payload(999),
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                // The battery voltage should still have the value from before (12.85)
+                const state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage');
+                if (state && state.val === 999) {
+                    throw new Error('Non-N/ topics should be ignored');
+                }
+            });
+
+            // ===== Null value test =====
+            it('Should handle null value', async function () {
+                this.timeout(5000);
+
+                await publishFromBroker(topic('battery', 256, 'CustomName'), payload(null));
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                const state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.CustomName');
+                if (!state) {
+                    throw new Error('State should exist for null value');
+                }
+                if (state.val !== null) {
+                    throw new Error(`Expected null, got ${JSON.stringify(state.val)}`);
+                }
+            });
+
+            // ===== Wrong portal ID should be ignored =====
+            it('Should ignore messages from different portal ID', async function () {
+                this.timeout(5000);
+
+                await publishFromBroker(
+                    `N/differentPortalId/battery/256/Dc/0/Voltage`,
+                    payload(777),
+                );
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                const state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage');
+                if (state && state.val === 777) {
+                    throw new Error('Messages with different portal ID should be ignored');
+                }
+            });
+
+            // ===== Verify parent folder structure =====
+            it('Should create device and channel hierarchy', async function () {
+                this.timeout(5000);
+
+                // After all previous tests, check hierarchy for battery
+                const device = await harness.objects.getObjectAsync('victron-cerbo.0.battery');
+                if (!device || device.type !== 'device') {
+                    throw new Error('Expected battery to be a device object');
+                }
+
+                const channel = await harness.objects.getObjectAsync('victron-cerbo.0.battery.256');
+                if (!channel || channel.type !== 'channel') {
+                    throw new Error('Expected battery.256 to be a channel object');
+                }
+
+                const subChannel = await harness.objects.getObjectAsync('victron-cerbo.0.battery.256.Dc');
+                if (!subChannel || subChannel.type !== 'channel') {
+                    throw new Error('Expected battery.256.Dc to be a channel object');
+                }
+            });
+
+            // ===== Charger relay state (writable, enum) =====
+            it('Should handle charger relay write-back', async function () {
+                this.timeout(5000);
+
+                await publishFromBroker(topic('charger', 261, 'Relay/0/State'), payload(0));
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                const obj = await harness.objects.getObjectAsync('victron-cerbo.0.charger.261.Relay.0.State');
                 if (!obj) {
-                    throw new Error('Object victron-cerbo.0.Emitter_1.ENERGY.Power should exist');
+                    throw new Error('Charger relay state should exist');
                 }
-                if (obj.common.role !== 'value.power') {
-                    throw new Error(`Expected role 'value.power', but got '${obj.common.role}'`);
+                if (obj.common.write !== true) {
+                    throw new Error('Charger relay state should be writable');
+                }
+                if (!obj.common.states) {
+                    throw new Error('Charger relay state should have states enum');
+                }
+
+                // Write-back test
+                adapterPublished.length = 0;
+                await harness.states.setStateAsync('victron-cerbo.0.charger.261.Relay.0.State', 1, false);
+                await new Promise((resolve) => setTimeout(resolve, 500));
+
+                const writeMsg = adapterPublished.find(
+                    (m) => m.topic === `W/${PORTAL_ID}/charger/261/Relay/0/State`,
+                );
+                if (!writeMsg) {
+                    throw new Error('Expected W/ topic for charger relay write-back');
+                }
+                const parsed = JSON.parse(writeMsg.payload);
+                if (parsed.value !== 1) {
+                    throw new Error(`Expected value 1, got ${parsed.value}`);
                 }
             });
 
-            it('Should have correct unit for BMP280_Pressure object', async function() {
-                const obj = await harness.objects.getObjectAsync('victron-cerbo.0.Emitter_1.BMP280_Pressure');
-                if (!obj) {
-                    throw new Error('Object victron-cerbo.0.Emitter_1.BMP280_Pressure should exist');
-                }
-                if (obj.common.unit !== 'mmHg') {
-                    throw new Error(`Expected unit 'mmHg', but got '${obj.common.unit}'`);
-                }
-            });
-
-            it('Should have correct units for BME280 object', async function() {
-                const pressureObj = await harness.objects.getObjectAsync('victron-cerbo.0.Emitter_1.BME280_Pressure');
-                if (!pressureObj) {
-                    throw new Error('Object victron-cerbo.0.Emitter_1.BME280_Pressure should exist');
-                }
-                if (pressureObj.common.unit !== 'mmHg') {
-                    throw new Error(`Expected pressure unit 'mmHg', but got '${pressureObj.common.unit}'`);
-                }
-
-                const tempObj = await harness.objects.getObjectAsync('victron-cerbo.0.Emitter_1.BME280_Temperature');
-                if (!tempObj) {
-                    throw new Error('Object victron-cerbo.0.Emitter_1.BME280_Temperature should exist');
-                }
-                if (tempObj.common.unit !== 'F') {
-                    throw new Error(`Expected temperature unit 'F', but got '${tempObj.common.unit}'`);
-                }
-            });
-
-            it('Should handle Zigbee device control', async function() {
+            // ===== Value update test – same state, new value =====
+            it('Should update existing state value', async function () {
                 this.timeout(5000);
 
-                // First send a Zigbee SENSOR message to create device states
-                await new Promise((resolve, reject) => {
-                    mqttClientEmitter.publish('tele/Emitter_1/SENSOR',
-                        '{"Time":"2022-05-05T20:49:08","ZbReceived":{"0x0856":{"Device":"0x0856","Name":"E14 Bulb","Power":0,"Dimmer":50,"Endpoint":1,"LinkQuality":65}}}',
-                        (err) => {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                });
+                // First value
+                await publishFromBroker(topic('battery', 256, 'Dc/0/Voltage'), payload(12.5));
+                await new Promise((resolve) => setTimeout(resolve, 300));
 
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Clear received messages
-                lastReceivedTopic1 = null;
-                lastReceivedMessage1 = null;
-                lastReceivedTopic2 = null;
-                lastReceivedMessage2 = null;
-
-                // Change Zigbee Power state
-                await harness.states.setStateAsync('victron-cerbo.0.Emitter_1.ZbReceived_0x0856_Power', true, false);
-
-                // Wait for ZbSend command
-                await new Promise(resolve => setTimeout(resolve, 200));
-
-                // Check if ZbSend command was published
-                const receivedTopic = lastReceivedTopic1 || lastReceivedTopic2;
-                const receivedMessage = lastReceivedMessage1 || lastReceivedMessage2;
-
-                if (!receivedTopic) {
-                    throw new Error('Expected to receive a topic, but got null');
-                }
-                if (!receivedTopic.includes('ZbSend')) {
-                    throw new Error(`Expected topic to contain 'ZbSend', but got '${receivedTopic}'`);
-                }
-                if (!receivedMessage) {
-                    throw new Error('Expected to receive a message, but got null');
+                let state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage');
+                if (!state || state.val !== 12.5) {
+                    throw new Error(`Expected 12.5, got ${state?.val}`);
                 }
 
-                const zbCommand = JSON.parse(receivedMessage);
-                if (zbCommand.device !== '0x0856') {
-                    throw new Error(`Expected device '0x0856', but got '${zbCommand.device}'`);
-                }
-                if (zbCommand.send.Power !== '1') {
-                    throw new Error(`Expected Power '1', but got '${zbCommand.send.Power}'`);
+                // Updated value
+                await publishFromBroker(topic('battery', 256, 'Dc/0/Voltage'), payload(13.2));
+                await new Promise((resolve) => setTimeout(resolve, 300));
+
+                state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage');
+                if (!state || state.val !== 13.2) {
+                    throw new Error(`Expected 13.2, got ${state?.val}`);
                 }
             });
 
-            it('Should handle Zigbee dimmer control', async function() {
+            // ===== Boolean coercion after initial creation =====
+            it('Should consistently coerce boolean-inferred states', async function () {
                 this.timeout(5000);
 
-                // First send a Zigbee SENSOR message to create device states
-                await new Promise((resolve, reject) => {
-                    mqttClientEmitter.publish('tele/Emitter_1/SENSOR',
-                        '{"Time":"2022-05-05T20:49:08","ZbReceived":{"0x1234":{"Device":"0x1234","Name":"Test Dimmer","Power":1,"Dimmer":50,"Endpoint":1,"LinkQuality":70}}}',
-                        (err) => {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                });
+                // Send 1 first
+                await publishFromBroker(topic('custom', 1, 'Connected'), payload(1));
+                await new Promise((resolve) => setTimeout(resolve, 300));
 
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Clear received messages
-                lastReceivedTopic1 = null;
-                lastReceivedMessage1 = null;
-                lastReceivedTopic2 = null;
-                lastReceivedMessage2 = null;
-
-                // Change Zigbee Dimmer state
-                await harness.states.setStateAsync('victron-cerbo.0.Emitter_1.ZbReceived_0x1234_Dimmer', 75, false);
-
-                // Wait for ZbSend command
-                await new Promise(resolve => setTimeout(resolve, 200));
-
-                // Check if ZbSend command was published
-                const receivedTopic = lastReceivedTopic1 || lastReceivedTopic2;
-                const receivedMessage = lastReceivedMessage1 || lastReceivedMessage2;
-
-                if (!receivedTopic) {
-                    throw new Error('Expected to receive a topic, but got null');
-                }
-                if (!receivedTopic.includes('ZbSend')) {
-                    throw new Error(`Expected topic to contain 'ZbSend', but got '${receivedTopic}'`);
-                }
-                if (!receivedMessage) {
-                    throw new Error('Expected to receive a message, but got null');
+                let state = await harness.states.getStateAsync('victron-cerbo.0.custom.1.Connected');
+                if (!state || state.val !== true) {
+                    throw new Error(`Expected true, got ${state?.val}`);
                 }
 
-                const zbCommand = JSON.parse(receivedMessage);
-                if (zbCommand.device !== '0x1234') {
-                    throw new Error(`Expected device '0x1234', but got '${zbCommand.device}'`);
+                // Send 0
+                await publishFromBroker(topic('custom', 1, 'Connected'), payload(0));
+                await new Promise((resolve) => setTimeout(resolve, 300));
+
+                state = await harness.states.getStateAsync('victron-cerbo.0.custom.1.Connected');
+                if (!state || state.val !== false) {
+                    throw new Error(`Expected false, got ${state?.val}`);
                 }
-                if (zbCommand.send.Dimmer !== 75) {
-                    throw new Error(`Expected Dimmer 75, but got '${zbCommand.send.Dimmer}'`);
-                }
-            });
 
-            it('Should handle shutter position command transformation', async function() {
-                this.timeout(5000);
+                // Send 1 again
+                await publishFromBroker(topic('custom', 1, 'Connected'), payload(1));
+                await new Promise((resolve) => setTimeout(resolve, 300));
 
-                // First send a shutter RESULT message to create device states
-                await new Promise((resolve, reject) => {
-                    mqttClientEmitter.publish('stat/TM_Shutter/RESULT',
-                        '{"Shutter1":{"Position":56,"Direction":0,"Target":56,"Tilt":0}}',
-                        (err) => {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                });
-
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Clear received messages
-                lastReceivedTopic1 = null;
-                lastReceivedMessage1 = null;
-                lastReceivedTopic2 = null;
-                lastReceivedMessage2 = null;
-
-                // Change Shutter1_Position state
-                await harness.states.setStateAsync('victron-cerbo.0.Emitter_1.Shutter1_Position', 49, false);
-
-                // Wait for ShutterPosition command
-                await new Promise(resolve => setTimeout(resolve, 200));
-
-                // Check if ShutterPosition command was published
-                const receivedTopic = lastReceivedTopic1 || lastReceivedTopic2;
-                const receivedMessage = lastReceivedMessage1 || lastReceivedMessage2;
-
-                if (!receivedTopic) {
-                    throw new Error('Expected to receive a topic, but got null');
-                }
-                // The adapter sends to the last known device topic (sonoff_4ch in this case from previous tests)
-                if (!/cmnd\/.+\/ShutterPosition1/.test(receivedTopic)) {
-                    throw new Error(`Expected topic to match 'cmnd/.+/ShutterPosition1', but got '${receivedTopic}'`);
-                }
-                if (receivedMessage !== '49') {
-                    throw new Error(`Expected message '49', but got '${receivedMessage}'`);
-                }
-            });
-
-            it('Should handle shutter tilt command transformation', async function() {
-                this.timeout(5000);
-
-                // First send a shutter RESULT message to create device states
-                await new Promise((resolve, reject) => {
-                    mqttClientEmitter.publish('stat/TM_Shutter/RESULT',
-                        '{"Shutter2":{"Position":75,"Direction":1,"Target":100,"Tilt":25}}',
-                        (err) => {
-                            if (err) return reject(err);
-                            resolve();
-                        });
-                });
-
-                await new Promise(resolve => setTimeout(resolve, 500));
-
-                // Clear received messages
-                lastReceivedTopic1 = null;
-                lastReceivedMessage1 = null;
-                lastReceivedTopic2 = null;
-                lastReceivedMessage2 = null;
-
-                // Change Shutter2_Tilt state
-                await harness.states.setStateAsync('victron-cerbo.0.Emitter_1.Shutter2_Tilt', 80, false);
-
-                // Wait for ShutterTilt command
-                await new Promise(resolve => setTimeout(resolve, 200));
-
-                // Check if ShutterTilt command was published
-                const receivedTopic = lastReceivedTopic1 || lastReceivedTopic2;
-                const receivedMessage = lastReceivedMessage1 || lastReceivedMessage2;
-
-                if (!receivedTopic) {
-                    throw new Error('Expected to receive a topic, but got null');
-                }
-                // The adapter sends to the last known device topic (sonoff_4ch in this case from previous tests)
-                if (!/cmnd\/.+\/ShutterTilt2/.test(receivedTopic)) {
-                    throw new Error(`Expected topic to match 'cmnd/.+/ShutterTilt2', but got '${receivedTopic}'`);
-                }
-                if (receivedMessage !== '80') {
-                    throw new Error(`Expected message '80', but got '${receivedMessage}'`);
+                state = await harness.states.getStateAsync('victron-cerbo.0.custom.1.Connected');
+                if (!state || state.val !== true) {
+                    throw new Error(`Expected true again, got ${state?.val}`);
                 }
             });
         });
-    }
+    },
 });
