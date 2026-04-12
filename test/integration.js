@@ -839,7 +839,7 @@ tests.integration(path.join(__dirname, '..'), {
                 this.timeout(60000);
 
                 // Start mock MQTT broker (aedes)
-                const Aedes = require('aedes');
+                const { Aedes } = require('aedes');
                 const net = require('net');
                 broker = new Aedes();
                 server = net.createServer(broker.handle);
