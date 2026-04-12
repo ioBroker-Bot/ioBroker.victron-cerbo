@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "victron-cerbo",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "news": {
+      "0.2.0": {
+        "en": "Implemented the tests",
+        "de": "Durchführung der Tests",
+        "ru": "Осуществление испытаний",
+        "pt": "Implementação dos testes",
+        "nl": "De tests uitgevoerd",
+        "fr": "Mise en œuvre des essais",
+        "it": "Implementato i test",
+        "es": "Ejecutado las pruebas",
+        "pl": "Wdrożenie testów",
+        "uk": "Реалізовано тести",
+        "zh-cn": "进行了测试"
+      },
       "0.1.0": {
         "en": "Corrected some states",
         "de": "Einige Staaten korrigiert",

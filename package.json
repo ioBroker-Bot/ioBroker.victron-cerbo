@@ -1,7 +1,7 @@
 {
   "name": "iobroker.victron-cerbo",
   "description": "ioBroker adapter for Victron Cerbo GX devices via MQTT",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "Denis Haev <dogafox@gmail.com>",
   "homepage": "https://github.com/ioBroker/ioBroker.victron-cerbo",
   "repository": {
