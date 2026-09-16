@@ -96,7 +96,7 @@
     "connectionType": "local",
     "dataSource": "push",
     "tier": 2,
-    "extIcon": "https://raw.githubusercontent.com/ioBroker/ioBroker.victron-cerbo/master/admin/victron-cerbo.svg",
+    "extIcon": "https://raw.githubusercontent.com/ioBroker/ioBroker.victron-cerbo/main/admin/victron-cerbo.svg",
     "type": "energy",
     "dependencies": [
       {
