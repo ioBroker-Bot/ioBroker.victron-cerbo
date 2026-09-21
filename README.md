@@ -1,4 +1,4 @@
-![Logo](admin/victron-cerbo.png)
+![Logo](admin/victron-cerbo.svg)
 # ioBroker Victron Cerbo
 
 ![Number of Installations](http://iobroker.live/badges/victron-cerbo-installed.svg)
