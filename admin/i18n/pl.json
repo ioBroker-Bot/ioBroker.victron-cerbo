@@ -12,5 +12,14 @@
     "Password": "Hasło",
     "User": "Użytkownik",
     "VRM Portal ID": "Identyfikator portalu VRM",
-    "VRM Portal ID of the Cerbo GX (e.g. c0619ab82b23). Found in Settings > VRM online portal": "ID portalu VRM Cerbo GX (np. c0619ab82b23). Można znaleźć w Ustawienia > Portal VRM online"
+    "VRM Portal ID of the Cerbo GX (e.g. c0619ab82b23). Found in Settings > VRM online portal": "ID portalu VRM Cerbo GX (np. c0619ab82b23). Można znaleźć w Ustawienia > Portal VRM online",
+    "Web interface of the Cerbo": "Interfejs WWW Cerbo",
+    "The web interface of the Cerbo (GUI v2) can be opened as a tab in admin and through ioBroker.web, behind the login of ioBroker": "Interfejs WWW Cerbo (GUI v2) można otworzyć jako kartę w admin oraz przez ioBroker.web, za logowaniem ioBroker",
+    "Show the Cerbo as a tab in admin": "Pokaż Cerbo jako kartę w admin",
+    "Starts a small web server that admin passes the tab on to": "Uruchamia mały serwer WWW, do którego admin przekazuje kartę",
+    "IP address of the web server": "Adres IP serwera WWW",
+    "127.0.0.1 is enough if admin runs on the same host": "127.0.0.1 wystarczy, jeśli admin działa na tym samym hoście",
+    "Port of the web server": "Port serwera WWW",
+    "Show the Cerbo in web instance": "Pokaż Cerbo w instancji web",
+    "Reachable under /victron-cerbo.0/ of the web instance": "Dostępne pod /victron-cerbo.0/ instancji web"
 }

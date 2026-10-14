@@ -108,6 +108,77 @@
             "md": 6,
             "lg": 4,
             "xl": 4
+        },
+        "_header4": {
+            "newLine": true,
+            "type": "header",
+            "text": "Web interface of the Cerbo",
+            "size": 3,
+            "xs": 12,
+            "sm": 12,
+            "md": 12,
+            "lg": 12,
+            "xl": 12
+        },
+        "_webInfo": {
+            "newLine": true,
+            "type": "staticText",
+            "text": "The web interface of the Cerbo (GUI v2) can be opened as a tab in admin and through ioBroker.web, behind the login of ioBroker",
+            "xs": 12,
+            "sm": 12,
+            "md": 12,
+            "lg": 12,
+            "xl": 12
+        },
+        "webServer": {
+            "newLine": true,
+            "type": "checkbox",
+            "label": "Show the Cerbo as a tab in admin",
+            "help": "Starts a small web server that admin passes the tab on to",
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "bind": {
+            "newLine": true,
+            "type": "ip",
+            "label": "IP address of the web server",
+            "help": "127.0.0.1 is enough if admin runs on the same host",
+            "listenOnAllPorts": true,
+            "disabled": "!data.webServer",
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "port": {
+            "type": "port",
+            "label": "Port of the web server",
+            "min": 1,
+            "max": 65535,
+            "disabled": "!data.webServer",
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
+        },
+        "webInstance": {
+            "newLine": true,
+            "type": "instance",
+            "adapter": "web",
+            "all": true,
+            "allowDeactivate": true,
+            "label": "Show the Cerbo in web instance",
+            "help": "Reachable under /victron-cerbo.0/ of the web instance",
+            "xs": 12,
+            "sm": 12,
+            "md": 6,
+            "lg": 4,
+            "xl": 4
         }
     }
 }

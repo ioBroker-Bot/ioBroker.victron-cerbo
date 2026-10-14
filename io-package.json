@@ -79,6 +79,7 @@
     "platform": "Javascript/Node.js",
     "mode": "daemon",
     "compact": true,
+    "declareUsedResources": true,
     "enabled": true,
     "readme": "https://github.com/ioBroker/ioBroker.victron-cerbo/blob/master/README.md",
     "loglevel": "info",
@@ -86,6 +87,24 @@
     "adminUI": {
       "config": "json"
     },
+    "adminTab": {
+      "link": "%protocol%://%ip%:%port%/gui-v2/",
+      "proxy": true,
+      "name": {
+        "en": "Victron Cerbo GX",
+        "de": "Victron Cerbo GX",
+        "ru": "Victron Cerbo GX",
+        "pt": "Victron Cerbo GX",
+        "nl": "Victron Cerbo GX",
+        "fr": "Victron Cerbo GX",
+        "it": "Victron Cerbo GX",
+        "es": "Victron Cerbo GX",
+        "pl": "Victron Cerbo GX",
+        "uk": "Victron Cerbo GX",
+        "zh-cn": "Victron Cerbo GX"
+      }
+    },
+    "webExtension": "build/lib/web.js",
     "keywords": [
       "Victron",
       "Cerbo",
@@ -122,7 +141,11 @@
     "portalId": "",
     "keepaliveInterval": 30,
     "user": "",
-    "password": ""
+    "password": "",
+    "webServer": true,
+    "bind": "127.0.0.1",
+    "port": 8098,
+    "webInstance": ""
   },
   "objects": [],
   "instanceObjects": [

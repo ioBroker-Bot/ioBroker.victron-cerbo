@@ -12,5 +12,14 @@
     "Password": "密码",
     "User": "用户",
     "VRM Portal ID": "VRM门户ID",
-    "VRM Portal ID of the Cerbo GX (e.g. c0619ab82b23). Found in Settings > VRM online portal": "Cerbo GX的VRM门户ID（例如c0619ab82b23）。在设置 > VRM在线门户中找到"
+    "VRM Portal ID of the Cerbo GX (e.g. c0619ab82b23). Found in Settings > VRM online portal": "Cerbo GX的VRM门户ID（例如c0619ab82b23）。在设置 > VRM在线门户中找到",
+    "Web interface of the Cerbo": "Cerbo 的网页界面",
+    "The web interface of the Cerbo (GUI v2) can be opened as a tab in admin and through ioBroker.web, behind the login of ioBroker": "Cerbo 的网页界面 (GUI v2) 可以作为 admin 中的选项卡以及通过 ioBroker.web 打开，受 ioBroker 登录保护",
+    "Show the Cerbo as a tab in admin": "在 admin 中以选项卡显示 Cerbo",
+    "Starts a small web server that admin passes the tab on to": "启动一个小型 Web 服务器，admin 将选项卡转发给它",
+    "IP address of the web server": "Web 服务器的 IP 地址",
+    "127.0.0.1 is enough if admin runs on the same host": "如果 admin 运行在同一主机上，127.0.0.1 就足够了",
+    "Port of the web server": "Web 服务器端口",
+    "Show the Cerbo in web instance": "在 web 实例中显示 Cerbo",
+    "Reachable under /victron-cerbo.0/ of the web instance": "可通过 web 实例的 /victron-cerbo.0/ 访问"
 }

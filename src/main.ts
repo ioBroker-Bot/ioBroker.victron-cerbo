@@ -7,11 +7,13 @@
  */
 import { Adapter, type AdapterOptions } from '@iobroker/adapter-core';
 import { VictronMqttClient } from './lib/client';
+import { CerboWebServer } from './lib/webServer';
 import type { VictronCerboAdapterConfig } from './types';
 
 export class VictronCerboAdapter extends Adapter {
     declare config: VictronCerboAdapterConfig;
     client: VictronMqttClient | null = null;
+    webServer: CerboWebServer | null = null;
 
     public constructor(options: Partial<AdapterOptions> = {}) {
         super({
@@ -19,6 +21,10 @@ export class VictronCerboAdapter extends Adapter {
             name: 'victron-cerbo',
             ready: () => this.main(),
             unload: async (cb?: () => void): Promise<void> => {
+                if (this.webServer) {
+                    await this.webServer.stop();
+                    this.webServer = null;
+                }
                 if (this.client) {
                     await this.client.destroy();
                     this.client = null;
@@ -42,6 +48,25 @@ export class VictronCerboAdapter extends Adapter {
         void this.setState('info.connection', false, true);
         this.subscribeStates('*');
         this.client = new VictronMqttClient(this as ioBroker.Adapter);
+        this.startWebServer();
+    }
+
+    /** Web server for the tab in admin, which shows the web interface of the Cerbo */
+    private startWebServer(): void {
+        if (!this.config.webServer) {
+            return;
+        }
+        if (!this.config.mqttHost) {
+            this.log.warn('No address of the Cerbo configured, its web interface is not shown in admin');
+            return;
+        }
+        const port = parseInt(String(this.config.port), 10);
+        if (!(port > 0 && port < 65536)) {
+            this.log.warn(`Invalid port "${this.config.port}" for the web server of the Cerbo`);
+            return;
+        }
+        this.webServer = new CerboWebServer(this as ioBroker.Adapter, this.config.mqttHost, port, this.config.bind);
+        void this.webServer.start();
     }
 }
 
