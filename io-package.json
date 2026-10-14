@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "victron-cerbo",
-    "version": "0.2.1",
+    "version": "1.0.0",
     "news": {
+      "1.0.0": {
+        "en": "Adapter requires node.js >= 22 now.\nAdded: the web interface of the Cerbo (GUI v2) as a tab in admin (`adminTab.proxy`) and as a web extension of ioBroker.web\nThe port of the own web server for the admin tab is reported to js-controller 8 (`declareUsedResources`, `registerUsedResource`)\nAdded the missing translations, the tests run on Windows and macOS too",
+        "de": "Adapter benötigt jetzt node.js >= 22.\nHinzugefügt: Das Cerbo (GUI v2) als Tab in Admin (`AdminTab.proxy`) und als Erweiterung von ioBroker.Web\nDer Port des eigenen Webservers für den Admin-Tab wird an js-controller 8 gemeldet (`declareUsedResource`, `registerUsedResource`)\nFehlende Übersetzungen hinzugefügt, Tests laufen auch auf Windows und macOS",
+        "ru": "Теперь для адаптера требуется файл node.js >= 22.\nДобавлено: веб-интерфейс Cerbo (GUI v2) в виде вкладки в админке (`AdminTab.Proxy`) и в качестве веб-расширения IOBroker.web\nПорт собственного веб-сервера для вкладки администратора сообщается в js-controller 8 (`DeclareUsedResources`, `RegisterUsedResource`)\nДобавлены недостающие переводы, тесты также работают в Windows и macOS",
+        "pt": "O adaptador exige node.js >= 2.\nAdicionado: a interface web do Cerbo (GUI v2) como aba em admin (`AdminTab.proxy`) e extensão de IOBroker.web\nA porta do próprio servidor web para a aba admin é reportada ao js-controller 8 (`declareUsedResources`, `registerUsedResource`)\nAs traduções faltantes foram adicionadas e os testes no Windows e macOS",
+        "nl": "Voor de adapter is nu node.js >= 22 nodig.\nToegevoegd: de webinterface van de Cerbo (GUI v2) als tab in admin (`AdminTab.proxy`) en als webextensie van IOBroker.web\nDe poort van de eigen webserver voor het admin-tabblad wordt gerapporteerd aan js-controller 8 (`declareUsedResources`, `RegisterUsedResource`)\nDe ontbrekende vertalingen toegevoegd, de tests worden ook uitgevoerd op Windows en MacOS",
+        "fr": "Adapter nécessite node.js >= 22.\nAjouté : l'interface Web du Cerbo (GUI v2) sous forme d'onglet d'admin (« AdminTab.proxy ») et d'extension Web d'IObroker.Web\nLe port du serveur Web pour l'onglet admin est indiqué à js-controller 8 (« DeclareUsedResources », « RegisterUsedResource »)\nAjout des traductions manquantes et des tests sur Windows et macOS",
+        "it": "Adapter richiede node.js >= 2 ora.\nAggiunta: l'interfaccia web di Cerbo (GUI v2) come scheda in admin e come estensione web di IOBroker.web\nLa porta del server web per la scheda admin è indicata a js-controller 8 (`DeclareUsedResources`, `registerUsedResource`)\nAggiunte le traduzioni mancanti, i test anche su Windows e macOS",
+        "es": "El adaptador necesita node.js >= 22 ahora.\nAñadido: la interfaz web del Cerbo (GUI v2) como pestaña de admin (`AdminTab.Proxy`) y como extensión web de IOBroker.WEB\nEl puerto del propio servidor web para la pestaña admin se envía a js-controller 8 (`DeclareUsedResources`, `RegisterUsedResource`)\nAñadió las traducciones que faltaban, las pruebas también en Windows y macOS",
+        "pl": "Adapter wymaga teraz node.js >= 22.\nDodano: interfejs internetowy Cerbo (GUI v2) jako zakładkę w administratorze (`AdminTab.proxy`) i jako rozszerzenie internetowe IOBroker.web\nPort własnego serwera WWW dla zakładki admin jest zgłaszany do js-controller 8 (`DeclareUsedResources`, `RegisterUsedResource`)\nDodano brakujące tłumaczenia, testy działają również w systemie Windows i macOS",
+        "uk": "Тепер адаптер вимагає node.js >= 22.\nДодано: веб-інтерфейс Cerbo (GUI v2) як вкладка в admin (`AdminTab.proxy`) і як веб-розширення IObroker.web\nПорт власного веб-сервера для вкладки адміністратора повідомляється на js-контролер 8 (`declareusedResource`, `RegisterUsedResource`)\nДодані відсутні переклади, тести також виконуються на Windows та macOS",
+        "zh-cn": "适配器现在需要 node.js >= 22。\n新增：将 Cerbo（GUI v2）的 Web 界面作为管理员（`adminTab.proxy`）中的选项卡和 IOBroker.Web 的 Web 扩展程序\n管理选项卡自有 Web 服务器的端口报告给 js-controller 8（`DeclareUsedResources`、`registerUsedResource`）\n添加了缺失的翻译，测试也在 Windows 和 macOS 上运行"
+      },
       "0.2.1": {
         "en": "Implemented the tests\nCorrected some states",
         "de": "Durchführung der Tests\nEinige Datenpunkte korrigiert",
