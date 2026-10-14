@@ -17,6 +17,8 @@ updates:
       cronjob: '24 2 17 * *'
     open-pull-requests-limit: 20
     versioning-strategy: 'increase'
+    cooldown:
+      default-days: 7
     ignore:
       - dependency-name: '@types/node'
         update-types:

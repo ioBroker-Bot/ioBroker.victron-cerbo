@@ -38,6 +38,7 @@ GUI v2 connects to the MQTT web socket at the root of the host (`/websocket-mqtt
 * (copilot) Adapter requires node.js >= 22 now
 * (@GermanBluefox) Added: the web interface of the Cerbo (GUI v2) as a tab in admin (`adminTab.proxy`) and as a web extension of ioBroker.web
 * (@GermanBluefox) The port of the own web server for the admin tab is reported to js-controller 8 (`declareUsedResources`, `registerUsedResource`)
+* (@GermanBluefox) Added the missing translations, the tests run on Windows and macOS too
 
 ### 0.2.1 (2026-04-12)
 * (@GermanBluefox) Implemented the tests

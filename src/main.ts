@@ -47,7 +47,7 @@ export class VictronCerboAdapter extends Adapter {
     private main(): void {
         void this.setState('info.connection', false, true);
         this.subscribeStates('*');
-        this.client = new VictronMqttClient(this as ioBroker.Adapter);
+        this.client = new VictronMqttClient(this);
         this.startWebServer();
     }
 
@@ -65,7 +65,7 @@ export class VictronCerboAdapter extends Adapter {
             this.log.warn(`Invalid port "${this.config.port}" for the web server of the Cerbo`);
             return;
         }
-        this.webServer = new CerboWebServer(this as ioBroker.Adapter, this.config.mqttHost, port, this.config.bind);
+        this.webServer = new CerboWebServer(this, this.config.mqttHost, port, this.config.bind);
         void this.webServer.start();
     }
 }

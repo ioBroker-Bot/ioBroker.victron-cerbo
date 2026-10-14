@@ -4,30 +4,17 @@
     "version": "0.2.1",
     "news": {
       "0.2.1": {
-        "en": "Implemented the tests",
-        "de": "Durchführung der Tests",
-        "ru": "Осуществление испытаний",
-        "pt": "Implementação dos testes",
-        "nl": "De tests uitgevoerd",
-        "fr": "Mise en œuvre des essais",
-        "it": "Implementato i test",
-        "es": "Ejecutado las pruebas",
-        "pl": "Wdrożenie testów",
-        "uk": "Реалізовано тести",
-        "zh-cn": "进行了测试"
-      },
-      "0.1.0": {
-        "en": "Corrected some states",
-        "de": "Einige Staaten korrigiert",
-        "ru": "Исправлены некоторые штаты",
-        "pt": "Corrigido alguns estados",
-        "nl": "Gecorrigeerd aantal staten",
-        "fr": "Correction de certains états",
-        "it": "Corretto alcuni stati",
-        "es": "Corregidos algunos estados",
-        "pl": "Poprawiono niektóre stany",
-        "uk": "Виправлено деякі стани",
-        "zh-cn": "更正了一些州"
+        "en": "Implemented the tests\nCorrected some states",
+        "de": "Durchführung der Tests\nEinige Datenpunkte korrigiert",
+        "ru": "Осуществление испытаний\nИсправлены некоторые штаты",
+        "pt": "Implementação dos testes\nCorrigido alguns estados",
+        "nl": "De tests uitgevoerd\nGecorrigeerd aantal staten",
+        "fr": "Mise en œuvre des essais\nCorrection de certains états",
+        "it": "Implementato i test\nCorretto alcuni stati",
+        "es": "Ejecutado las pruebas\nCorregidos algunos estados",
+        "pl": "Wdrożenie testów\nPoprawiono niektóre stany",
+        "uk": "Реалізовано тести\nВиправлено деякі стани",
+        "zh-cn": "进行了测试\n更正了一些州"
       },
       "0.0.1": {
         "en": "Initial release",

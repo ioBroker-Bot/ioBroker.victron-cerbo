@@ -69,7 +69,7 @@ export default class VictronCerboWebExtension {
         this.proxy = new CerboProxy(config.mqttHost, adapter.log);
 
         app.use(this.prefix, this.onRequest);
-        this.restoreUpgrades = interceptUpgrades(server as HttpServer, this.onUpgrade);
+        this.restoreUpgrades = interceptUpgrades(server, this.onUpgrade);
 
         adapter.log.info(`Install extension on ${this.prefix}/ -> http://${config.mqttHost}/`);
     }
