@@ -843,10 +843,10 @@ tests.integration(path.join(__dirname, '..'), {
             before(async function () {
                 this.timeout(60000);
 
-                // Start mock MQTT broker (aedes 0.51.x)
-                const aedes = require('aedes');
+                // Start mock MQTT broker (aedes >= 1.0)
+                const { Aedes } = require('aedes');
                 const net = require('node:net');
-                broker = aedes();
+                broker = await Aedes.createBroker();
                 server = net.createServer(broker.handle);
                 await new Promise(resolve => server.listen(MQTT_PORT, resolve));
                 console.log(`Mock MQTT broker started on port ${MQTT_PORT}`);
