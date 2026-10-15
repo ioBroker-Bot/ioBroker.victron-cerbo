@@ -900,7 +900,18 @@ tests.integration(path.join(__dirname, '..'), {
             });
 
             // ===== Keepalive test =====
-            it('Should send keepalive messages', async function () {
+            it('Should ask for all values with the first keepalive of a connection', async function () {
+                this.timeout(5000);
+                const first = adapterPublished.find(m => m.topic === `R/${PORTAL_ID}/keepalive`);
+                if (!first) {
+                    throw new Error('Expected a keepalive right after connecting');
+                }
+                if (first.payload !== '') {
+                    throw new Error(`Expected an empty payload (full publish), got ${first.payload}`);
+                }
+            });
+
+            it('Should send keepalive messages that do not ask for all values again', async function () {
                 this.timeout(10000);
                 adapterPublished.length = 0;
                 // Wait for a keepalive (interval is 5s)
@@ -908,6 +919,12 @@ tests.integration(path.join(__dirname, '..'), {
                 const keepalives = adapterPublished.filter(m => m.topic === `R/${PORTAL_ID}/keepalive`);
                 if (keepalives.length === 0) {
                     throw new Error('Expected at least one keepalive message');
+                }
+                for (const keepalive of keepalives) {
+                    const options = JSON.parse(keepalive.payload)['keepalive-options'];
+                    if (!Array.isArray(options) || !options.includes('suppress-republish')) {
+                        throw new Error(`Expected "suppress-republish", got ${keepalive.payload}`);
+                    }
                 }
             });
 
@@ -1332,6 +1349,52 @@ tests.integration(path.join(__dirname, '..'), {
                 state = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Voltage');
                 if (!state || state.val !== 13.2) {
                     throw new Error(`Expected 13.2, got ${state?.val}`);
+                }
+            });
+
+            // ===== A full publish of the Cerbo brings mostly unchanged values =====
+            it('Should not write an unchanged value again', async function () {
+                this.timeout(5000);
+
+                await publishFromBroker(topic('battery', 256, 'Dc/0/Current'), payload(4.2));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
+                const first = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Current');
+                if (!first || first.val !== 4.2) {
+                    throw new Error(`Expected 4.2, got ${first?.val}`);
+                }
+
+                await publishFromBroker(topic('battery', 256, 'Dc/0/Current'), payload(4.2));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
+                const again = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Current');
+                if (again.ts !== first.ts) {
+                    throw new Error('Expected the unchanged value not to be written again');
+                }
+
+                await publishFromBroker(topic('battery', 256, 'Dc/0/Current'), payload(4.3));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
+                const changed = await harness.states.getStateAsync('victron-cerbo.0.battery.256.Dc.0.Current');
+                if (changed.val !== 4.3) {
+                    throw new Error(`Expected 4.3, got ${changed.val}`);
+                }
+            });
+
+            it('Should confirm a written value even if it did not change', async function () {
+                this.timeout(5000);
+
+                await publishFromBroker(topic('inverter', 276, 'Mode'), payload(3));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
+
+                // the user writes the value the state already has
+                await harness.states.setStateAsync('victron-cerbo.0.inverter.276.Mode', 3, false);
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
+
+                // the Cerbo answers with the value it took over
+                await publishFromBroker(topic('inverter', 276, 'Mode'), payload(3));
+                await new Promise(resolve => setTimeout(resolve, PROCESS_WAIT));
+
+                const state = await harness.states.getStateAsync('victron-cerbo.0.inverter.276.Mode');
+                if (!state || state.val !== 3 || !state.ack) {
+                    throw new Error(`Expected 3 with ack=true, got ${state?.val} with ack=${state?.ack}`);
                 }
             });
 

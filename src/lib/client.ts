@@ -5,6 +5,12 @@ import { inferFromName } from './nameInference';
 
 const FORBIDDEN_CHARS = /[\][*,;'"`<>\\?]/g;
 
+/**
+ * Keepalive that only keeps the values coming. Without it, every keepalive makes the Cerbo publish all
+ * of its topics again - several thousand values, nearly all of them unchanged, every 30 seconds
+ */
+const KEEPALIVE_SUPPRESS_REPUBLISH = JSON.stringify({ 'keepalive-options': ['suppress-republish'] });
+
 export class VictronMqttClient {
     private readonly adapter: ioBroker.Adapter;
     private readonly config: VictronCerboAdapterConfig;
@@ -12,6 +18,10 @@ export class VictronMqttClient {
     private keepaliveTimer: ReturnType<typeof setInterval> | null = null;
     private readonly existingObjects = new Set<string>();
     private readonly stateTypes = new Map<string, ioBroker.CommonType>();
+    /** The value last written to each state */
+    private readonly lastValues = new Map<string, ioBroker.StateValue>();
+    /** Whether the current connection already asked the Cerbo for all of its values */
+    private fullPublishRequested = false;
     private portalId: string;
 
     constructor(adapter: ioBroker.Adapter) {
@@ -53,6 +63,8 @@ export class VictronMqttClient {
         this.mqttClient.on('connect', () => {
             this.adapter.log.info('Connected to Victron Cerbo MQTT broker');
             void this.adapter.setState('info.connection', true, true);
+            // a new session has no subscriptions: the first keepalive has to bring all values
+            this.fullPublishRequested = false;
             this.subscribe();
             this.startKeepalive();
         });
@@ -129,7 +141,13 @@ export class VictronMqttClient {
             return;
         }
 
-        this.mqttClient.publish(`R/${this.portalId}/keepalive`, '');
+        // Only the first keepalive of a connection asks for all values, every later one just keeps them
+        // coming: the Cerbo publishes each change by itself anyway
+        this.mqttClient.publish(
+            `R/${this.portalId}/keepalive`,
+            this.fullPublishRequested ? KEEPALIVE_SUPPRESS_REPUBLISH : '',
+        );
+        this.fullPublishRequested = true;
         this.adapter.log.debug('Keepalive sent');
     }
 
@@ -300,6 +318,13 @@ export class VictronMqttClient {
         await this.ensureState(stateId, serviceType, dbusPath, value);
 
         const val = this.coerceValue(stateId, serviceType, dbusPath, value);
+        // A full publish brings all values at once, and any client of the Cerbo can ask for one - its
+        // own web interface does on every keepalive. Writing thousands of unchanged values blocks the
+        // states database of ioBroker for seconds, so only changes are written
+        if (this.lastValues.has(stateId) && this.lastValues.get(stateId) === val) {
+            return;
+        }
+        this.lastValues.set(stateId, val);
         await this.adapter.setStateAsync(stateId, { val, ack: true });
     }
 
@@ -459,6 +484,10 @@ export class VictronMqttClient {
         }
 
         const localId = id.substring(adapterPrefix.length);
+
+        // The Cerbo answers a write with the value it took over. It must be written with ack=true even if
+        // it is the value written before, otherwise the state would stay unconfirmed
+        this.lastValues.delete(localId);
 
         // Check if state is writable
         const obj = await this.adapter.getObjectAsync(localId);

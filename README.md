@@ -32,6 +32,10 @@ GUI v2 connects to the MQTT web socket at the root of the host (`/websocket-mqtt
     ### **WORK IN PROGRESS**
 -->
 ## Changelog
+### **WORK IN PROGRESS**
+* (@GermanBluefox) Fixed: the keepalive no longer makes the Cerbo publish all values again
+* (@GermanBluefox) Unchanged values are not written again
+
 ### 1.0.0 (2026-10-14)
 * (iobroker-bot) Adapter requires node.js >= 22 now.
 * (@GermanBluefox) Added: the web interface of the Cerbo (GUI v2) as a tab in admin (`adminTab.proxy`) and as a web extension of ioBroker.web
