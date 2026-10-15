@@ -1,8 +1,21 @@
 {
   "common": {
     "name": "victron-cerbo",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "news": {
+      "1.0.1": {
+        "en": "Fixed: the keepalive no longer makes the Cerbo publish all values again\nUnchanged values are not written again",
+        "de": "Behoben: Beim Keepalive gibt Cerbo nicht mehr alle Werte aus\nUnveränderte Werte werden nie wieder",
+        "ru": "Исправлено: keepalive больше не заставляет Cerbo снова публиковать все значения\nНеизмененные значения больше не записываются",
+        "pt": "Corrigido: o keepalive não faz mais o Cerbo publicar todos os valores\nValores inalterados não se reescrevem",
+        "nl": "Opgelost: de keepalive zorgt er niet langer voor dat de Cerbo alle waarden opnieuw publiceert\nOnveranderde waarden worden niet opnieuw geschreven",
+        "fr": "Corrigé : le Keepalive n'oblige plus le Cerbo à publier à nouveau toutes les valeurs\nLes valeurs inchangées ne sont pas réécrites",
+        "it": "Risolto: il keepalive non fa più ripubblicare tutti i valori al Cerbo\nI valori immutati non si riscrivono",
+        "es": "Corregido: KeepAlive ya no hace que el Cerbo publique todos los valores\nLos valores sin cambios no se vuelven a escribir",
+        "pl": "Naprawiono: Keepalive nie powoduje już, że Cerbo ponownie publikuje wszystkie wartości\nNiezmienione wartości nie są ponownie zapisywane",
+        "uk": "Виправлено: keepalive більше не змушує Cerbo знову публікувати всі значення\nНезмінені значення не записуються знову",
+        "zh-cn": "修复：keepalive 不再让 Cerbo 再次发布所有值\n不会再次写入未更改的值"
+      },
       "1.0.0": {
         "en": "Adapter requires node.js >= 22 now.\nAdded: the web interface of the Cerbo (GUI v2) as a tab in admin (`adminTab.proxy`) and as a web extension of ioBroker.web\nThe port of the own web server for the admin tab is reported to js-controller 8 (`declareUsedResources`, `registerUsedResource`)\nAdded the missing translations, the tests run on Windows and macOS too",
         "de": "Adapter benötigt jetzt node.js >= 22.\nHinzugefügt: Das Cerbo (GUI v2) als Tab in Admin (`AdminTab.proxy`) und als Erweiterung von ioBroker.Web\nDer Port des eigenen Webservers für den Admin-Tab wird an js-controller 8 gemeldet (`declareUsedResource`, `registerUsedResource`)\nFehlende Übersetzungen hinzugefügt, Tests laufen auch auf Windows und macOS",
